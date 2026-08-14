@@ -1,0 +1,6 @@
+statement_date,transaction_date,reference,description,debit,credit,balance
+2026-07-31,2026-07-01,OPENING,Opening balance,0.00,0.00,0.00
+2026-07-31,2026-07-05,INV-1001,Invoice - delivery,250.00,0.00,250.00
+2026-07-31,2026-07-12,PAY-001,Bank transfer payment,0.00,100.00,150.00
+2026-07-31,2026-07-18,CN-001,Credit note - damaged items,0.00,25.00,125.00
+2026-07-31,2026-07-25,INV-1002,Invoice - delivery,175.00,0.00,300.00

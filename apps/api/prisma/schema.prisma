@@ -1,0 +1,739 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  CASHIER
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  currency  String   @default("USD")
+  taxRateBasisPoints Int @default(0)
+  defaultInventoryAlertLevel Int @default(5)
+  address   String?
+  phone     String?
+  receiptPrefix String @default("R")
+  receiptFooter String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches  Branch[]
+  users     User[]
+  auditLogs AuditLog[]
+  categories Category[]
+  products Product[]
+  variants ProductVariant[]
+  customers Customer[]
+  suppliers Supplier[]
+  supplierCatalog SupplierCatalogItem[]
+  sales    Sale[]
+  cashShifts CashShift[]
+  stockTransfers StockTransfer[]
+  stockReceipts StockReceipt[]
+  modifierOptionSets ModifierOptionSet[]
+  heldSales HeldSale[]
+  purchaseOrders PurchaseOrder[]
+  supplierInvoices SupplierInvoice[]
+  expenses BusinessExpense[]
+  purchaseOrderChangeRequests PurchaseOrderChangeRequest[]
+  promotions Promotion[]
+  giftCards GiftCard[]
+}
+
+model GiftCard {
+  id String @id @default(cuid())
+  businessId String
+  code String
+  balance Int @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  @@unique([businessId, code])
+}
+
+model Promotion {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  type        String
+  value       Int
+  minimumSpend Int     @default(0)
+  productId   String?
+  categoryId  String?
+  buyQuantity Int     @default(0)
+  rewardQuantity Int  @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, isActive])
+}
+
+model Branch {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  code       String
+  address    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  users      User[]
+  inventory  InventoryItem[]
+  variantInventory ProductVariantInventory[]
+  sales      Sale[]
+  cashShifts CashShift[]
+  outgoingTransfers StockTransfer[] @relation("TransferSourceBranch")
+  incomingTransfers StockTransfer[] @relation("TransferDestinationBranch")
+  stockReceipts StockReceipt[]
+  heldSales HeldSale[]
+  purchaseOrders PurchaseOrder[]
+  supplierInvoices SupplierInvoice[]
+  expenses BusinessExpense[]
+
+  @@unique([businessId, code])
+}
+
+model User {
+  id         String   @id @default(cuid())
+  businessId String
+  branchId   String?
+  email      String   @unique
+  firstName  String
+  lastName   String
+  role       UserRole @default(CASHIER)
+  passwordHash String?
+  pinHash      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch     Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  cashShifts CashShift[]
+  heldSales HeldSale[]
+  approvedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderApprover")
+  rejectedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderRejector")
+  dispatchedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderDispatcher")
+  requestedPurchaseOrderChanges PurchaseOrderChangeRequest[] @relation("PurchaseOrderChangeRequester")
+  reviewedPurchaseOrderChanges PurchaseOrderChangeRequest[] @relation("PurchaseOrderChangeReviewer")
+
+  @@index([businessId, role])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, entityType, entityId])
+}
+
+model Category {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  products   Product[]
+  @@unique([businessId, name])
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  businessId String
+  categoryId String?
+  name       String
+  sku        String
+  barcode    String?
+  imageUrl   String?
+  regularPrice Int?
+  price      Int?
+  cost       Int?
+  reorderLevel Int @default(0)
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  inventory  InventoryItem[]
+  saleItems  SaleItem[]
+  stockTransfers StockTransfer[]
+  stockReceipts StockReceipt[]
+  modifierGroups ProductModifierGroup[]
+  variants ProductVariant[]
+  variantOptions ProductVariantOption[]
+  purchaseOrderItems PurchaseOrderItem[]
+  supplierCatalog SupplierCatalogItem[]
+  @@unique([businessId, sku])
+  @@unique([businessId, barcode])
+}
+
+// Variants are for retail goods where each sellable choice has its own stock
+// (for example, shoe size 34 / 35 or a shirt's colour and size). They are
+// intentionally separate from modifier groups, which are for made-to-order
+// choices such as a coffee's sugar level.
+model ProductVariant {
+  id         String   @id @default(cuid())
+  businessId String
+  productId  String
+  name      String
+  sku       String
+  barcode   String?
+  regularPrice Int?
+  price     Int?
+  cost      Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventory ProductVariantInventory[]
+  saleItems SaleItem[]
+  stockTransfers StockTransfer[] @relation("TransferVariant")
+  stockReceipts StockReceipt[] @relation("ReceiptVariant")
+  purchaseOrderItems PurchaseOrderItem[]
+  selections ProductVariantSelection[]
+  supplierCatalog SupplierCatalogItem[]
+
+  @@unique([productId, name])
+  @@unique([businessId, sku])
+  @@unique([businessId, barcode])
+  @@index([businessId, isActive])
+  @@index([productId, isActive])
+}
+
+// A Shopify-style option group belongs to a product (for example, Color or
+// Size). Its values are separate from sellable variant combinations so the
+// product editor can manage option values, galleries, and combinations cleanly.
+model ProductVariantOption {
+  id        String   @id @default(cuid())
+  productId String
+  name      String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  values  ProductVariantOptionValue[]
+
+  @@unique([productId, name])
+  @@index([productId, position])
+}
+
+model ProductVariantOptionValue {
+  id        String   @id @default(cuid())
+  optionId  String
+  name      String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  option     ProductVariantOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  selections ProductVariantSelection[]
+  images     ProductVariantOptionValueImage[]
+
+  @@unique([optionId, name])
+  @@index([optionId, position])
+}
+
+model ProductVariantOptionValueImage {
+  id            String   @id @default(cuid())
+  optionValueId String
+  imageUrl      String
+  position      Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  optionValue ProductVariantOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@index([optionValueId, position])
+}
+
+model ProductVariantSelection {
+  variantId     String
+  optionValueId String
+
+  variant     ProductVariant            @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue ProductVariantOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, optionValueId])
+  @@index([optionValueId])
+}
+
+model ProductVariantInventory {
+  id        String   @id @default(cuid())
+  branchId  String
+  variantId String
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  movements ProductVariantStockMovement[]
+
+  @@unique([branchId, variantId])
+}
+
+// Immutable log of manual variant stock changes. Keeping this separate from
+// current quantity makes audits and future all-variants reporting reliable.
+model ProductVariantStockMovement {
+  id                       String   @id @default(cuid())
+  productVariantInventoryId String
+  quantityChange           Int
+  reason                   String
+  actorId                  String?
+  createdAt                DateTime @default(now())
+
+  inventory ProductVariantInventory @relation(fields: [productVariantInventoryId], references: [id], onDelete: Restrict)
+
+  @@index([productVariantInventoryId, createdAt])
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  phone      String?
+  email      String?
+  note       String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  sales      Sale[]
+  @@unique([businessId, phone])
+  @@index([businessId, name])
+}
+
+model Supplier {
+  id         String   @id @default(cuid())
+  businessId String
+  code       String
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  receipts   StockReceipt[]
+  purchaseOrders PurchaseOrder[]
+  invoices SupplierInvoice[]
+  catalogItems SupplierCatalogItem[]
+  @@unique([businessId, name])
+  @@unique([businessId, code])
+}
+
+// A supplier catalog item may belong to either a product or one exact variant.
+// This keeps purchasing flexible without duplicating product data.
+model SupplierCatalogItem {
+  id         String   @id @default(cuid())
+  businessId String
+  supplierId String
+  productId  String
+  variantId  String?
+  supplierSku String?
+  lastCost   Int?
+  isPreferred Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, productId, variantId])
+  @@index([businessId, productId])
+  @@index([businessId, variantId])
+}
+
+model InventoryItem {
+  id         String   @id @default(cuid())
+  branchId   String
+  productId  String
+  quantity   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  movements  StockMovement[]
+  @@unique([branchId, productId])
+}
+
+model StockMovement {
+  id              String   @id @default(cuid())
+  inventoryItemId String
+  quantityChange  Int
+  reason          String
+  actorId         String?
+  createdAt       DateTime @default(now())
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  @@index([inventoryItemId, createdAt])
+}
+
+model StockTransfer {
+  id                  String   @id @default(cuid())
+  businessId          String
+  sourceBranchId      String
+  destinationBranchId String
+  productId           String
+  variantId           String?
+  quantity            Int
+  note                String?
+  createdById         String
+  createdAt           DateTime @default(now())
+  business            Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  sourceBranch        Branch   @relation("TransferSourceBranch", fields: [sourceBranchId], references: [id], onDelete: Restrict)
+  destinationBranch   Branch   @relation("TransferDestinationBranch", fields: [destinationBranchId], references: [id], onDelete: Restrict)
+  product             Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant             ProductVariant? @relation("TransferVariant", fields: [variantId], references: [id], onDelete: Restrict)
+  @@index([businessId, createdAt])
+  @@index([sourceBranchId, createdAt])
+  @@index([destinationBranchId, createdAt])
+}
+
+model StockReceipt {
+  id         String   @id @default(cuid())
+  businessId String
+  branchId   String
+  supplierId String?
+  productId  String
+  variantId  String?
+  quantity   Int
+  unitCost   Int?
+  reference  String?
+  note       String?
+  receivedById String
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant    ProductVariant? @relation("ReceiptVariant", fields: [variantId], references: [id], onDelete: Restrict)
+  @@index([businessId, createdAt])
+  @@index([branchId, createdAt])
+}
+
+model PurchaseOrder {
+  id          String   @id @default(cuid())
+  businessId  String
+  branchId    String
+  supplierId  String
+  reference   String?
+  note        String?
+  status      String   @default("DRAFT")
+  expectedDeliveryDate DateTime?
+  createdById String
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  approvedById String?
+  rejectedAt  DateTime?
+  rejectedById String?
+  rejectionReason String?
+  dispatchedAt DateTime?
+  dispatchedById String?
+  supplierConfirmedAt DateTime?
+  supplierConfirmationReference String?
+  confirmedDeliveryDate DateTime?
+  createdAt   DateTime @default(now())
+  receivedAt  DateTime?
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  approvedBy  User?    @relation("PurchaseOrderApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  rejectedBy  User?    @relation("PurchaseOrderRejector", fields: [rejectedById], references: [id], onDelete: SetNull)
+  dispatchedBy User?   @relation("PurchaseOrderDispatcher", fields: [dispatchedById], references: [id], onDelete: SetNull)
+  items       PurchaseOrderItem[]
+  invoices    SupplierInvoice[]
+  changeRequests PurchaseOrderChangeRequest[]
+  @@index([businessId, createdAt])
+  @@index([branchId, status])
+  @@index([approvedById])
+  @@index([rejectedById])
+  @@index([dispatchedById])
+}
+
+model PurchaseOrderChangeRequest {
+  id              String @id @default(cuid())
+  businessId      String
+  purchaseOrderId String
+  requestedById   String
+  reviewedById    String?
+  reason          String
+  changes         Json
+  status          String @default("PENDING")
+  createdAt       DateTime @default(now())
+  reviewedAt      DateTime?
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  requestedBy     User @relation("PurchaseOrderChangeRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  reviewedBy      User? @relation("PurchaseOrderChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  @@index([purchaseOrderId, status])
+  @@index([businessId, createdAt])
+}
+
+model PurchaseOrderItem {
+  id               String @id @default(cuid())
+  purchaseOrderId  String
+  productId        String
+  variantId        String?
+  quantityOrdered  Int
+  quantityReceived Int    @default(0)
+  unitCost         Int?
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product          Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant          ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  @@unique([purchaseOrderId, productId, variantId])
+}
+
+model SupplierInvoice {
+  id              String   @id @default(cuid())
+  businessId      String
+  branchId        String
+  supplierId      String
+  purchaseOrderId String?
+  invoiceNumber   String
+  total           Int
+  dueDate         DateTime?
+  status          String   @default("UNPAID")
+  disputeStatus   String?
+  disputeReason   String?
+  disputeReference String?
+  disputedAt      DateTime?
+  resolvedAt      DateTime?
+  note            String?
+  createdById     String
+  createdAt       DateTime @default(now())
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch          Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  payments        SupplierInvoicePayment[]
+  credits         SupplierInvoiceCredit[]
+  @@unique([businessId, invoiceNumber])
+  @@index([supplierId, status])
+}
+
+model SupplierInvoicePayment {
+  id                String   @id @default(cuid())
+  supplierInvoiceId String
+  amount            Int
+  paymentMethod     String
+  note              String?
+  paidAt            DateTime @default(now())
+  recordedById      String
+  invoice           SupplierInvoice @relation(fields: [supplierInvoiceId], references: [id], onDelete: Cascade)
+  @@index([supplierInvoiceId, paidAt])
+}
+
+model SupplierInvoiceCredit {
+  id                String @id @default(cuid())
+  supplierInvoiceId String
+  amount            Int
+  reference         String?
+  note              String?
+  recordedById      String
+  createdAt         DateTime @default(now())
+  supplierInvoice   SupplierInvoice @relation(fields: [supplierInvoiceId], references: [id], onDelete: Cascade)
+  @@index([supplierInvoiceId, createdAt])
+}
+
+// Day-to-day operating costs. Amounts are stored in cents, consistent with
+// sales and supplier invoices. This is intentionally separate from a cash
+// drawer movement: a cash payment should also be recorded as cash-out in the
+// active shift when the cashier physically removes cash from the drawer.
+model BusinessExpense {
+  id            String   @id @default(cuid())
+  businessId    String
+  branchId      String
+  category      String
+  amount        Int
+  paymentMethod String
+  note          String?
+  expenseDate   DateTime @default(now())
+  recordedById  String
+  createdAt     DateTime @default(now())
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch        Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, expenseDate])
+  @@index([branchId, expenseDate])
+}
+
+model ProductModifierGroup {
+  id            String   @id @default(cuid())
+  productId     String
+  name          String
+  minSelections Int      @default(0)
+  maxSelections Int      @default(1)
+  createdAt     DateTime @default(now())
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options       ProductModifierOption[]
+  @@unique([productId, name])
+}
+
+model ProductModifierOption {
+  id              String   @id @default(cuid())
+  groupId         String
+  name            String
+  priceAdjustment Int      @default(0)
+  createdAt       DateTime @default(now())
+  group           ProductModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  @@unique([groupId, name])
+}
+
+// Reusable business-level templates. Applying a set copies its options to a
+// product's modifier group, so sales keep a stable snapshot even if a template
+// is later changed.
+model ModifierOptionSet {
+  id            String   @id @default(cuid())
+  businessId    String
+  name          String
+  minSelections Int      @default(0)
+  maxSelections Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  options       ModifierOptionSetItem[]
+
+  @@unique([businessId, name])
+}
+
+model ModifierOptionSetItem {
+  id          String   @id @default(cuid())
+  optionSetId String
+  name        String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  optionSet   ModifierOptionSet @relation(fields: [optionSetId], references: [id], onDelete: Cascade)
+
+  @@unique([optionSetId, name])
+}
+
+model Sale {
+  id         String   @id @default(cuid())
+  businessId String
+  clientTransactionId String?
+  branchId   String
+  cashierId  String
+  cashShiftId String?
+  customerId String?
+  exchangeSourceSaleId String?
+  exchangeCredit Int @default(0)
+  taxTotal  Int      @default(0)
+  paymentMethod String
+  subtotal   Int @default(0)
+  discountTotal Int @default(0)
+  total      Int
+  amountTendered Int?
+  changeDue Int @default(0)
+  refundedAt DateTime?
+  refundedById String?
+  refundReason String?
+  note       String?
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch     Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  cashShift  CashShift? @relation(fields: [cashShiftId], references: [id], onDelete: SetNull)
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  exchangeSourceSale Sale? @relation("SaleExchanges", fields: [exchangeSourceSaleId], references: [id], onDelete: SetNull)
+  exchangeSales Sale[] @relation("SaleExchanges")
+  items      SaleItem[]
+  @@index([businessId, createdAt])
+  @@index([exchangeSourceSaleId])
+  @@index([cashShiftId])
+  @@unique([businessId, clientTransactionId])
+}
+
+model HeldSale {
+  id            String   @id @default(cuid())
+  businessId    String
+  branchId      String
+  cashierId     String
+  label         String
+  customerId    String?
+  paymentMethod String   @default("CASH")
+  discountTotal Int      @default(0)
+  note          String?
+  items         Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  cashier  User     @relation(fields: [cashierId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, branchId, updatedAt])
+}
+
+model SaleItem {
+  id        String @id @default(cuid())
+  saleId    String
+  productId String
+  variantId String?
+  quantity  Int
+  returnedQuantity Int @default(0)
+  unitPrice Int
+  unitCost  Int?
+  lineTotal Int
+  modifiers Json?
+  note      String?
+  sale      Sale @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+}
+
+model CashShift {
+  id            String   @id @default(cuid())
+  businessId    String
+  branchId      String
+  cashierId     String
+  openingCash   Int
+  closingCash   Int?
+  varianceReason String?
+  openedAt      DateTime @default(now())
+  closedAt      DateTime?
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch        Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  cashier       User     @relation(fields: [cashierId], references: [id], onDelete: Restrict)
+  movements     CashMovement[]
+  sales         Sale[]
+  @@index([cashierId, closedAt])
+}
+
+model CashMovement {
+  id          String   @id @default(cuid())
+  cashShiftId String
+  amount      Int
+  reason      String
+  createdAt   DateTime @default(now())
+  cashShift   CashShift @relation(fields: [cashShiftId], references: [id], onDelete: Restrict)
+}

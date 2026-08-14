@@ -1,0 +1,3 @@
+ALTER TABLE "Sale" ADD COLUMN "note" TEXT;
+ALTER TABLE "SaleItem" ADD COLUMN "note" TEXT;
+ALTER TABLE "HeldSale" ADD COLUMN "note" TEXT;

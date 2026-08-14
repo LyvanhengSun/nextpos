@@ -1,0 +1,15 @@
+{
+  "name": "pos-system",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @pos/web --filter @pos/api dev",
+    "build": "pnpm --filter @pos/types build && pnpm --filter @pos/web build && pnpm --filter @pos/api build",
+    "lint": "pnpm --filter @pos/web lint && pnpm --filter @pos/api lint",
+    "test": "pnpm --filter @pos/api test"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

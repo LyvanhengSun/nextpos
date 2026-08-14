@@ -1,0 +1,13 @@
+{
+  "name": "POS System",
+  "short_name": "POS",
+  "description": "Cashier point-of-sale application",
+  "start_url": "/pos",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#172033",
+  "icons": [
+    { "src": "/icons/pos-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/pos-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

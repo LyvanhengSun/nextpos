@@ -1,0 +1,3 @@
+ALTER TABLE "Sale"
+  ADD COLUMN "amountTendered" INTEGER,
+  ADD COLUMN "changeDue" INTEGER NOT NULL DEFAULT 0;

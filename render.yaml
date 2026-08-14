@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: kn-pos-api
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @pos/types build && pnpm --filter @pos/api db:generate && pnpm --filter @pos/api build
+    preDeployCommand: pnpm --filter @pos/api db:migrate:deploy
+    startCommand: pnpm --filter @pos/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kn-pos-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEB_ORIGIN
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+
+databases:
+  - name: kn-pos-db
+    region: singapore
+    plan: free
+    databaseName: kn_pos
+    user: kn_pos
