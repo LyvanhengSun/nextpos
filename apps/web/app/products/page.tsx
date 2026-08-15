@@ -4661,7 +4661,7 @@ export default function ProductsPage({
                     Product Categories
                   </h2>
                   <p className="m-0 max-w-2xl text-sm leading-6 text-text-muted">
-                    Organize products for faster checkout. Drag to reorder.
+                    Organize and reorder products for faster checkout.
                   </p>
                 </div>
               </div>
