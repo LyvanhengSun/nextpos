@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -31,13 +32,10 @@ export class BusinessesController {
   constructor(private readonly businesses: BusinessesService) {}
 
   @Post()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   create(@Body() input: CreateBusinessDto) {
     return this.businesses.create(input);
-  }
-
-  @Get()
-  findAll() {
-    return this.businesses.findAll();
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

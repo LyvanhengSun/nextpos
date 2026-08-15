@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { hash } from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 
@@ -8,6 +9,7 @@ export class BusinessesService {
 
   async create(input: CreateBusinessDto) {
     try {
+      const passwordHash = await hash(input.ownerPassword, 12);
       return await this.prisma.$transaction(async (tx) => {
         const business = await tx.business.create({
           data: { name: input.name, code: input.code, currency: input.currency },
@@ -23,6 +25,7 @@ export class BusinessesService {
             firstName: input.ownerFirstName,
             lastName: input.ownerLastName,
             role: 'OWNER',
+            passwordHash,
           },
         });
         await tx.auditLog.create({
@@ -34,7 +37,17 @@ export class BusinessesService {
             entityId: business.id,
           },
         });
-        return { business, branch, owner };
+        return {
+          business,
+          branch,
+          owner: {
+            id: owner.id,
+            email: owner.email,
+            firstName: owner.firstName,
+            lastName: owner.lastName,
+            role: owner.role,
+          },
+        };
       });
     } catch (error) {
       if (this.isUniqueConstraintError(error)) {
@@ -42,13 +55,6 @@ export class BusinessesService {
       }
       throw error;
     }
-  }
-
-  findAll() {
-    return this.prisma.business.findMany({
-      include: { branches: true, _count: { select: { users: true } } },
-      orderBy: { createdAt: 'desc' },
-    });
   }
 
   listBranches(businessId: string) {

@@ -18,6 +18,7 @@ import {
   CustomSelect,
   FormField,
   Input,
+  PasswordInput,
   SectionCard,
 } from '@/components/ui';
 
@@ -26,6 +27,8 @@ const initialValues = {
   currency: 'USD',
   ownerName: '',
   ownerEmail: '',
+  password: '',
+  confirmPassword: '',
 };
 
 const currencyOptions = [
@@ -69,6 +72,12 @@ export default function SetupPage() {
     setSaving(true);
     setMessage(undefined);
 
+    if (values.password !== values.confirmPassword) {
+      setMessage({ tone: 'error', text: 'Passwords do not match.' });
+      setSaving(false);
+      return;
+    }
+
     const nameParts = values.ownerName.trim().split(/\s+/).filter(Boolean);
     const ownerFirstName = nameParts.shift() ?? '';
     const ownerLastName = nameParts.join(' ') || 'Owner';
@@ -86,6 +95,7 @@ export default function SetupPage() {
           ownerFirstName,
           ownerLastName,
           ownerEmail: values.ownerEmail.trim(),
+          ownerPassword: values.password,
         }),
       });
       const data = (await response.json()) as { message?: string };
@@ -95,7 +105,7 @@ export default function SetupPage() {
 
       setMessage({
         tone: 'success',
-        text: 'Business created. Continue to activate your owner account.',
+        text: 'Business created. You can now sign in with your email and password.',
       });
       setValues(initialValues);
     } catch (error) {
@@ -219,6 +229,46 @@ export default function SetupPage() {
                     placeholder="owner@example.com"
                     prefixIcon={<Mail size={16} />}
                     onChange={(event) => updateValue('ownerEmail', event.target.value)}
+                  />
+                </FormField>
+
+                <FormField
+                  id="setup-password"
+                  label="Password"
+                  required
+                  help="Use at least 12 characters."
+                >
+                  <PasswordInput
+                    id="setup-password"
+                    required
+                    minLength={12}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    value={values.password}
+                    placeholder="12+ characters"
+                    onChange={(event) => updateValue('password', event.target.value)}
+                  />
+                </FormField>
+
+                <FormField
+                  id="setup-confirm-password"
+                  label="Confirm password"
+                  required
+                  error={
+                    values.confirmPassword && values.password !== values.confirmPassword
+                      ? 'Passwords do not match.'
+                      : undefined
+                  }
+                >
+                  <PasswordInput
+                    id="setup-confirm-password"
+                    required
+                    minLength={12}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    value={values.confirmPassword}
+                    placeholder="Enter password again"
+                    onChange={(event) => updateValue('confirmPassword', event.target.value)}
                   />
                 </FormField>
 

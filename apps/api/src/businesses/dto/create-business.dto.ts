@@ -5,6 +5,7 @@ import {
   IsString,
   Matches,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 
 export class CreateBusinessDto {
@@ -41,4 +42,9 @@ export class CreateBusinessDto {
   @IsNotEmpty()
   @MaxLength(60)
   ownerLastName!: string;
+
+  @IsString()
+  @MinLength(12)
+  @MaxLength(128)
+  ownerPassword!: string;
 }
