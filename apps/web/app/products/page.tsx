@@ -4660,7 +4660,7 @@ export default function ProductsPage({
                   <h2 className="mb-1 text-base font-bold tracking-tight text-text-main">
                     Product Categories
                   </h2>
-                  <p className="m-0 max-w-2xl text-sm leading-6 text-text-muted">
+                  <p className="m-0 max-w-2xl text-xs leading-relaxed text-text-muted">
                     Organize and reorder products for faster checkout.
                   </p>
                 </div>
@@ -4841,7 +4841,7 @@ export default function ProductsPage({
                   <h2 className="mb-1 text-base font-bold tracking-tight text-text-main">
                     Import products from CSV
                   </h2>
-                  <p className="m-0 text-sm leading-6 text-text-muted">
+                  <p className="m-0 text-xs leading-relaxed text-text-muted">
                     Add multiple products from a CSV export.
                   </p>
                 </div>
