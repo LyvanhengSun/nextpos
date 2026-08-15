@@ -400,8 +400,7 @@ export default function TransfersPage() {
                   </div>
                 </form>
               ) : (
-                <AlertBanner tone="warning">
-                  <CircleAlert size={18} />{' '}
+                <AlertBanner tone="warning" icon={<CircleAlert size={18} />}>
                   {me?.branchId
                     ? 'Create another branch before transferring stock.'
                     : 'Choose an active branch before transferring stock.'}
