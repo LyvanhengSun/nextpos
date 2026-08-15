@@ -384,9 +384,9 @@ export function AppNav() {
       </header>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-[90] min-[769px]:hidden">
+        <div className="fixed inset-0 z-[220] min-[769px]:hidden">
           <Button type="button" variant="overlay" size="bareIcon" className="absolute inset-0 h-full w-full rounded-none p-0" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><span className="sr-only">Close navigation menu</span></Button>
-          <aside className="fixed inset-y-0 right-0 z-[91] flex h-dvh w-full max-w-sm flex-col overflow-hidden border-l border-border-subtle bg-card shadow-xl" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title">
+          <aside className="fixed inset-y-0 right-0 z-[221] flex h-dvh w-full max-w-sm flex-col overflow-hidden border-l border-border-subtle bg-card shadow-xl" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title">
             <div className="flex items-center justify-between border-b border-border-subtle px-4 py-4">
               <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-md bg-brand text-white"><Store size={20} /></span><h2 id="mobile-nav-title" className="text-base font-bold text-text-main">Navigation</h2></div>
               <Button type="button" variant="iconBareDanger" size="icon" className="-mr-2" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><X size={20} /></Button>
