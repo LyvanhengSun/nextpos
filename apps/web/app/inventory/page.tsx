@@ -885,7 +885,7 @@ export default function InventoryPage() {
         {activeTab === 'valuation' && (
           <SectionCard
             title="Inventory valuation"
-            description="Stock value calculated from weighted-average cost."
+            description="Stock value using weighted-average cost."
             icon={<SlidersHorizontal size={20} />}
             bodyPadding={false}
           >

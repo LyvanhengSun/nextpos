@@ -259,7 +259,7 @@ export default function ReceivingPage() {
         <section className="mb-6 grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(270px,1fr)]">
           <SectionCard
             title="Receive delivery"
-            description="Add the exact product or variant delivered by your supplier."
+            description="Add each product or variant received."
             icon={<Truck size={20} />}
             className="h-full"
           >

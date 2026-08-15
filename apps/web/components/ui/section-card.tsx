@@ -34,9 +34,9 @@ export function SectionCard({
     >
       {hasHeader && (
         <header
-          className={`flex flex-col gap-4 border-b border-border-subtle px-4 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-8 ${headerClassName}`.trim()}
+          className={`flex items-start justify-between gap-3 border-b border-border-subtle px-4 py-6 sm:gap-4 sm:px-8 ${headerClassName}`.trim()}
         >
-          <div className="flex min-w-0 items-start gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
             {icon && (
               <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-brand/20 bg-brand-subtle text-brand">
                 {icon}
@@ -56,7 +56,7 @@ export function SectionCard({
             </div>
           </div>
           {actions && (
-            <div className="flex shrink-0 items-center gap-2 sm:justify-end">
+            <div className="flex shrink-0 items-center justify-end gap-2">
               {actions}
             </div>
           )}

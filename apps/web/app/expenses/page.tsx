@@ -247,7 +247,7 @@ export default function ExpensesPage() {
           <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.35fr)]">
             <SectionCard
               title="Record expense"
-              description="Cash payments automatically create a matching cash-out in the open shift."
+              description="Cash payments also record a cash-out in the open shift."
               icon={<WalletCards size={20} />}
             >
               <form className="flex flex-col gap-6" onSubmit={create}>

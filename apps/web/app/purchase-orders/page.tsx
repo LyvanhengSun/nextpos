@@ -891,7 +891,7 @@ export default function PurchaseOrdersPage() {
                     Create purchase order
                   </h2>
                   <p className="mt-1 mb-0 text-xs text-text-muted">
-                    Choose a supplier first to use its saved products and costs.
+                    Choose a supplier to load saved products and costs.
                   </p>
                 </div>
               </div>
