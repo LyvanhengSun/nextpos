@@ -1,0 +1,56 @@
+name: Verify production build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pos_ci
+          POSTGRES_PASSWORD: pos_ci_password
+          POSTGRES_DB: pos_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pos_ci -d pos_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pos_ci:pos_ci_password@localhost:5432/pos_ci
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations to a fresh database
+        run: pnpm --filter @pos/api db:migrate:deploy
+
+      - name: Verify migrations match the Prisma schema
+        run: >-
+          pnpm --filter @pos/api exec prisma migrate diff
+          --from-url "$DATABASE_URL"
+          --to-schema-datamodel prisma/schema.prisma
+          --exit-code
+
+      - name: Build all production applications
+        run: pnpm run build
