@@ -245,7 +245,7 @@ export default function SuppliersPage() {
         }
       />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

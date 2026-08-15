@@ -314,7 +314,7 @@ export default function CustomersPage() {
         }
       />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

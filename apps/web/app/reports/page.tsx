@@ -346,7 +346,7 @@ export default function ReportsPage() {
     <main className="w-full pb-16">
       <PageHeading eyebrow="Reports" title="Profit & Loss" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           <div className="flex flex-col gap-6">
             {message && <AlertBanner tone="error">{message}</AlertBanner>}

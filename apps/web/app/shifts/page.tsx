@@ -333,7 +333,7 @@ export default function ShiftsPage() {
         title={shift ? 'Active cash shift' : 'Open a cash shift'}
       />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           <div className="flex flex-col gap-5">
             {message && <AlertBanner tone="info">{message}</AlertBanner>}

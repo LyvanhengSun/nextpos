@@ -256,7 +256,7 @@ export default function StaffPage() {
     <main className="app-page">
       <PageHeading eyebrow="Owner control" title="Staff" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

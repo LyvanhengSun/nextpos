@@ -489,7 +489,7 @@ export default function SalesPage() {
     <main className="w-full pb-16">
       <PageHeading eyebrow="Transactions" title="Sales history" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           <div className="flex flex-col gap-5">
             <section

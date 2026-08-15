@@ -105,7 +105,7 @@ export default function SupplierDetailPage() {
             </Button>
           }
         />
-        <div className="py-6">
+        <div>
           <PageContainer>
             <AlertBanner tone="error">{message}</AlertBanner>
           </PageContainer>
@@ -116,7 +116,7 @@ export default function SupplierDetailPage() {
     return (
       <main className="app-page">
         <PageHeading eyebrow="Supplier detail" title="Loading supplier" />
-        <div className="py-6">
+        <div>
           <PageContainer>
             <section className="rounded-lg border border-border-subtle bg-card shadow-sm">
               <EmptyState title="Loading supplier…" />
@@ -152,7 +152,7 @@ export default function SupplierDetailPage() {
           </Button>
         }
       />
-      <div className="py-6">
+      <div>
         <PageContainer>
           <section className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

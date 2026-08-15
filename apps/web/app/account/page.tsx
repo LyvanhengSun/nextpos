@@ -183,7 +183,7 @@ export default function AccountPage() {
         title={user ? `${user.firstName} ${user.lastName}` : 'My account'}
       />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

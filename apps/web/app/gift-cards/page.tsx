@@ -128,7 +128,7 @@ export default function GiftCardsPage() {
     <main className="app-page">
       <PageHeading eyebrow="Customer credit" title="Gift cards" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

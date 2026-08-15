@@ -211,7 +211,7 @@ export default function ActivityPage() {
     <main className="app-page">
       <PageHeading eyebrow="Owner control" title="Activity logs" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message ? (
             <AlertBanner tone="error" icon={<AlertCircle size={18} />}>

@@ -206,7 +206,7 @@ export default function ExpensesPage() {
     <main className="app-page">
       <PageHeading eyebrow="Business costs" title="Expenses" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

@@ -728,7 +728,7 @@ export default function DashboardPage() {
         title={`Welcome, ${name || roleLabel}`}
       />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           <div className={dashboardStackClass}>
             {message && (

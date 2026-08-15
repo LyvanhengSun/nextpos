@@ -170,7 +170,7 @@ export default function BranchesPage() {
     <main className="app-page">
       <PageHeading eyebrow="Business locations" title="Branches" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

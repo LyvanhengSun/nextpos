@@ -150,7 +150,7 @@ export default function SettingsPage() {
     <main className="app-page">
       <PageHeading eyebrow="Owner settings" title="Tax & Receipt Settings" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

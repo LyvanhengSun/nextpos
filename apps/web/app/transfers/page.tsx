@@ -272,7 +272,7 @@ export default function TransfersPage() {
     <main className="app-page">
       <PageHeading eyebrow="Multi-branch inventory" title="Stock transfers" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner

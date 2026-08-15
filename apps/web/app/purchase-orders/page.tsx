@@ -873,7 +873,7 @@ export default function PurchaseOrdersPage() {
   return (
     <main className="app-page">
       <PageHeading eyebrow="Purchasing" title="Purchase orders" />
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner tone="success" className="mb-5">

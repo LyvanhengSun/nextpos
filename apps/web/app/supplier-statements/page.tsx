@@ -236,7 +236,7 @@ export default function SupplierStatementsPage() {
     <main className="app-page">
       <PageHeading eyebrow="Supplier accounts" title="Supplier statements" />
 
-      <div className="py-6">
+      <div>
         <PageContainer className="space-y-6">
           {showPageMessage && (
             <AlertBanner tone={messageTone} icon={alertIcon}>

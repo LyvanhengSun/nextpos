@@ -348,7 +348,7 @@ export default function PromotionsPage() {
         }
       />
 
-      <div className="py-6">
+      <div>
         <PageContainer className="space-y-6">
           {message && (
             <AlertBanner

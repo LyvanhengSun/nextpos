@@ -249,7 +249,7 @@ export default function LabelsPage() {
         }
       />
 
-      <div className="print-hide py-6">
+      <div className="print-hide">
         <PageContainer className="space-y-6">
           {message && (
             <AlertBanner

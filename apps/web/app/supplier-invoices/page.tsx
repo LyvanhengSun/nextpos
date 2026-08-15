@@ -394,7 +394,7 @@ export default function SupplierInvoicesPage() {
     <main className="app-page">
       <PageHeading eyebrow="Supplier accounts" title="Supplier invoices" />
 
-      <div className="py-6">
+      <div>
         <PageContainer>
           {message && (
             <AlertBanner
