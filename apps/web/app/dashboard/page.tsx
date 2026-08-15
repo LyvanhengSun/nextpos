@@ -473,7 +473,7 @@ function PurchaseOrderApprovalsCard({
             Purchase-order approvals ({approvals.length})
           </h3>
           <p className="mt-1 mb-0 text-xs text-amber-700">
-            Submitted orders need your approval before they can be received.
+            Approve submitted orders before receiving.
           </p>
         </div>
         <DashboardActionLink href="/purchase-orders" strong>
