@@ -44,7 +44,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             disabled={disabled}
-            className={`h-full w-full rounded-md bg-transparent px-3 text-sm font-semibold text-text-main outline-none transition placeholder:font-normal placeholder:text-slate-400 disabled:cursor-not-allowed ${
+            className={`h-full w-full rounded-md bg-transparent px-3 text-base font-semibold text-text-main outline-none transition placeholder:font-normal placeholder:text-slate-400 disabled:cursor-not-allowed sm:text-sm ${
               prefixText || prefixIcon ? 'pl-8' : ''
             } ${suffixIcon ? 'pr-9' : ''} ${className}`.trim()}
             {...props}
@@ -62,7 +62,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         disabled={disabled}
-        className={`h-10 w-full rounded-md border border-border-default bg-card px-3 text-sm font-semibold text-text-main shadow-2xs outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-brand/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-text-muted ${className}`.trim()}
+        className={`h-10 w-full rounded-md border border-border-default bg-card px-3 text-base font-semibold text-text-main shadow-2xs outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-brand/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-text-muted sm:text-sm ${className}`.trim()}
         {...props}
       />
     );
@@ -70,4 +70,3 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
-

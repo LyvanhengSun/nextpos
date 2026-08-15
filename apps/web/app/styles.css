@@ -5248,3 +5248,14 @@ input[type='number'] {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Prevent iOS Safari from zooming the page when a compact form field receives focus. */
+@media (max-width: 639px) {
+  input:not([type='hidden']):not([type='checkbox']):not([type='radio']):not(
+      [type='range']
+    ):not([type='color']):not([type='file']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
