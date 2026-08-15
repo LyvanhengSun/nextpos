@@ -383,10 +383,14 @@ export function AppNav() {
         </Button>
       </header>
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-[220] min-[769px]:hidden">
-          <Button type="button" variant="overlay" size="bareIcon" className="absolute inset-0 h-full w-full rounded-none p-0" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><span className="sr-only">Close navigation menu</span></Button>
-          <aside className="fixed inset-y-0 right-0 z-[221] flex h-dvh w-full max-w-sm flex-col overflow-hidden border-l border-border-subtle bg-card shadow-xl" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title">
+      <div
+        className={`fixed inset-0 z-[220] min-[769px]:hidden ${
+          mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
+        aria-hidden={!mobileOpen}
+      >
+          <Button type="button" variant="overlay" size="bareIcon" className={`absolute inset-0 h-full w-full rounded-none p-0 transition-opacity duration-300 ${mobileOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><span className="sr-only">Close navigation menu</span></Button>
+          <aside className={`fixed inset-y-0 right-0 z-[221] flex h-dvh w-full max-w-sm flex-col overflow-hidden border-l border-border-subtle bg-card shadow-xl transition-transform duration-300 ease-out motion-reduce:transition-none ${mobileOpen ? 'translate-x-0' : 'translate-x-full'}`} role="dialog" aria-modal={mobileOpen ? 'true' : undefined} aria-labelledby="mobile-nav-title">
             <div className="flex items-center justify-between border-b border-border-subtle px-4 py-4">
               <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-md bg-brand text-white"><Store size={20} /></span><h2 id="mobile-nav-title" className="text-base font-bold text-text-main">Navigation</h2></div>
               <Button type="button" variant="iconBareDanger" size="icon" className="-mr-2" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu"><X size={20} /></Button>
@@ -395,7 +399,6 @@ export function AppNav() {
             <div className="border-t border-border-subtle px-4 py-4"><Button type="button" variant="dangerSubtle" size="md" className="w-full" onClick={signOut}><LogOut size={18} /><span>Log out</span></Button></div>
           </aside>
         </div>
-      )}
 
       <aside className={`hidden h-screen shrink-0 flex-col bg-[var(--brand-navy-sidebar)] shadow-sm transition-[width] duration-200 min-[769px]:sticky min-[769px]:left-0 min-[769px]:top-0 min-[769px]:z-[80] min-[769px]:flex print:hidden ${compact ? 'w-[72px] overflow-visible' : 'w-64 overflow-hidden'}`}>
         <div className={`flex h-[76px] shrink-0 items-center border-b border-white/10 ${compact ? 'justify-center px-2' : 'gap-3 px-4'}`}>
