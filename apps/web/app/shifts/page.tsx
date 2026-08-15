@@ -742,6 +742,8 @@ export default function ShiftsPage() {
                 '.'
               }
               icon={<ClipboardCheck size={20} />}
+              headerClassName="max-sm:flex-wrap"
+              actionsClassName="max-sm:w-full max-sm:basis-full"
               actions={
                 <Input
                   value={historySearch}

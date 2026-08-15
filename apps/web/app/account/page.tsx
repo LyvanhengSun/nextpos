@@ -203,8 +203,8 @@ export default function AccountPage() {
 
           <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(19rem,0.78fr)_minmax(0,1.22fr)]">
             <div className="flex flex-col gap-6">
-              <SectionCard bodyClassName="flex flex-col gap-6">
-                <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <SectionCard bodyClassName="flex flex-col gap-5 sm:gap-6">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative shrink-0">
                     <div className="grid size-12 place-items-center rounded-full bg-brand text-base font-extrabold text-white shadow-sm sm:size-14 sm:text-lg">
                       {initials}
@@ -236,7 +236,7 @@ export default function AccountPage() {
                   {profileItems.map((item) => (
                     <div
                       key={item.label}
-                      className="flex items-start gap-3 py-4"
+                      className="flex items-start gap-3 py-3 sm:py-4"
                     >
                       <div className="grid size-9 shrink-0 place-items-center rounded-md bg-muted-surface text-text-muted">
                         {item.icon}
@@ -251,7 +251,7 @@ export default function AccountPage() {
                       </div>
                     </div>
                   ))}
-                  <div className="flex items-start gap-3 py-4">
+                  <div className="flex items-start gap-3 py-3 sm:py-4">
                     <div
                       className={`grid size-9 shrink-0 place-items-center rounded-md ${
                         user

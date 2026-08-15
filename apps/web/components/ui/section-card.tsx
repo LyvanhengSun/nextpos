@@ -10,6 +10,7 @@ type SectionCardProps = {
   bodyClassName?: string;
   bodyPadding?: boolean;
   headerClassName?: string;
+  actionsClassName?: string;
   contentClassName?: string;
 };
 
@@ -24,6 +25,7 @@ export function SectionCard({
   bodyClassName = '',
   bodyPadding = true,
   headerClassName = '',
+  actionsClassName = '',
   contentClassName = '',
 }: SectionCardProps) {
   const hasHeader = title || description || icon || actions;
@@ -56,7 +58,9 @@ export function SectionCard({
             </div>
           </div>
           {actions && (
-            <div className="flex shrink-0 items-center justify-end gap-2">
+            <div
+              className={`flex shrink-0 items-center justify-end gap-2 ${actionsClassName}`.trim()}
+            >
               {actions}
             </div>
           )}

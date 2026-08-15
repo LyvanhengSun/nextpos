@@ -832,6 +832,8 @@ export default function SalesPage() {
               title="Transactions"
               description={`${visibleSales.length} of ${totalSales} transactions shown`}
               className="overflow-visible"
+              headerClassName="max-sm:flex-wrap"
+              actionsClassName="max-sm:w-full max-sm:basis-full max-sm:justify-start"
               bodyPadding={false}
               actions={
                 <DateRangeControls
