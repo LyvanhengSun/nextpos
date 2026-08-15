@@ -891,7 +891,7 @@ export default function PurchaseOrdersPage() {
                     Create purchase order
                   </h2>
                   <p className="mt-1 mb-0 text-xs text-text-muted">
-                    Choose a supplier to load saved products and costs.
+                    Choose a supplier to load saved items and costs.
                   </p>
                 </div>
               </div>
@@ -1040,8 +1040,7 @@ export default function PurchaseOrdersPage() {
                   Receiving flow
                 </h2>
                 <p className="mt-1 mb-0 text-xs leading-relaxed text-text-muted">
-                  Create an order first. When products arrive, open it below and
-                  receive the delivered quantities.
+                  Create an order, then receive delivered quantities below.
                 </p>
               </div>
               <div className="mt-5 flex flex-col gap-3">

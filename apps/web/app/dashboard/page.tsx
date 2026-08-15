@@ -324,7 +324,7 @@ function RecentSalesCard({
   return (
     <SectionCard
       title="Recent sales"
-      description="Latest completed transactions across your active scope."
+      description="Latest completed transactions."
       actions={
         <DashboardActionLink href="/sales">View sales →</DashboardActionLink>
       }

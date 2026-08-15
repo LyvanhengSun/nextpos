@@ -451,8 +451,8 @@ export default function ReportsPage() {
 
             {dailyClose && (
               <SectionCard
-                title="Today’s cash and payment reconciliation"
-                description="Today only — separate from the selected report period."
+                title="Today’s cash reconciliation"
+                description="Separate from the selected report period."
                 actions={
                   <span className="rounded-full border border-brand-border bg-brand-subtle px-2 py-1 text-xs font-bold uppercase tracking-wider text-brand">
                     Today
