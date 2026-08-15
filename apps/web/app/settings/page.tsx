@@ -175,7 +175,7 @@ export default function SettingsPage() {
           ) : settings ? (
             <SectionCard
               title={`${settings.name || 'Business'} configuration`}
-              description="Set the defaults used for inventory, business details, and customer receipts."
+              description="Set inventory, business, and receipt defaults."
               icon={<Settings2 size={20} />}
             >
               <form className="flex flex-col gap-6" onSubmit={save}>
@@ -184,8 +184,7 @@ export default function SettingsPage() {
                     Business defaults
                   </h3>
                   <p className="mt-1 mb-4 text-xs leading-relaxed text-text-muted">
-                    Applied automatically when staff create products and
-                    complete sales.
+                    Applied automatically to new products and sales.
                   </p>
 
                   <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
