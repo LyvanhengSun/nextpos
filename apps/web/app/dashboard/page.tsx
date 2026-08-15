@@ -40,7 +40,7 @@ const SalesTrendChart = dynamic(
     loading: () => (
       <SectionCard
         title="7-day sales trend"
-        description="Daily completed revenue and transaction activity."
+        description="Daily revenue and transactions."
         bodyClassName="h-64 animate-pulse bg-muted-surface sm:h-72"
       >
         <span className="sr-only">Loading sales trend</span>
