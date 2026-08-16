@@ -26,6 +26,7 @@ import {
   SectionCard,
   StatusBadge,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -43,6 +44,7 @@ type Staff = {
 
 export default function StaffPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [editing, setEditing] = useState<Staff | null>(null);
@@ -112,12 +114,12 @@ export default function StaffPage() {
       ]);
       const data = await parse(users);
       if (!users.ok)
-        throw new Error(data.message ?? 'Only the owner can manage staff.');
+        throw new Error(data.message ?? t('staff.error.ownerOnly'));
       setStaff(data);
       if (branchList.ok) setBranches(await parse(branchList));
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to load staff list.',
+        error instanceof Error ? error.message : t('staff.error.load'),
         true,
       );
     }
@@ -140,15 +142,15 @@ export default function StaffPage() {
         body: JSON.stringify(form),
       });
       const data = await parse(response);
-      if (!response.ok) throw new Error(data.message ?? 'Unable to add staff.');
+      if (!response.ok) throw new Error(data.message ?? t('staff.error.add'));
       formElement.reset();
       setAddRole('CASHIER');
       setAddBranchId('');
-      notify('Staff member added. Share the password privately.');
+      notify(t('staff.success.added'));
       await checkRoleAndLoad();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to add staff.',
+        error instanceof Error ? error.message : t('staff.error.add'),
         true,
       );
     } finally {
@@ -173,13 +175,13 @@ export default function StaffPage() {
       });
       const data = await parse(response);
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to update staff.');
+        throw new Error(data.message ?? t('staff.error.update'));
       setEditing(null);
-      notify('Staff access updated.');
+      notify(t('staff.success.updated'));
       await checkRoleAndLoad();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to update staff.',
+        error instanceof Error ? error.message : t('staff.error.update'),
         true,
       );
     } finally {
@@ -199,13 +201,13 @@ export default function StaffPage() {
         body: JSON.stringify({ pin: form.pin }),
       });
       const data = await parse(response);
-      if (!response.ok) throw new Error(data.message ?? 'Unable to save PIN.');
+      if (!response.ok) throw new Error(data.message ?? t('staff.error.pin'));
       formElement.reset();
-      notify(data.message);
+      notify(data.message ?? t('staff.success.pin'));
       await checkRoleAndLoad();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to save PIN.',
+        error instanceof Error ? error.message : t('staff.error.pin'),
         true,
       );
     }
@@ -227,12 +229,12 @@ export default function StaffPage() {
       );
       const data = await parse(response);
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to reset password.');
-      notify(data.message);
+        throw new Error(data.message ?? t('staff.error.password'));
+      notify(data.message ?? t('staff.success.password'));
       formElement.reset();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to reset password.',
+        error instanceof Error ? error.message : t('staff.error.password'),
         true,
       );
     }
@@ -247,14 +249,14 @@ export default function StaffPage() {
   if (isOwner === null) {
     return (
       <main className="app-page">
-        <PageHeading eyebrow="Owner control" title="Staff" />
+        <PageHeading eyebrow={t('staff.eyebrow')} title={t('staff.title')} />
       </main>
     );
   }
 
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Owner control" title="Staff" />
+      <PageHeading eyebrow={t('staff.eyebrow')} title={t('staff.title')} />
 
       <div>
         <PageContainer>
@@ -272,8 +274,8 @@ export default function StaffPage() {
 
           <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.4fr)]">
             <SectionCard
-              title="Add staff member"
-              description="Create staff access."
+              title={t('staff.addMember')}
+              description={t('staff.addHelp')}
               icon={<UserPlus size={20} />}
             >
               <form
@@ -281,35 +283,35 @@ export default function StaffPage() {
                 className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2"
                 autoComplete="off"
               >
-                <FormField label="First name" required id="staff-first-name">
+                <FormField label={t('staff.firstName')} required id="staff-first-name">
                   <Input
                     id="staff-first-name"
                     required
                     name="firstName"
-                    placeholder="e.g. Sokha"
+                    placeholder={t('staff.firstNamePlaceholder')}
                   />
                 </FormField>
-                <FormField label="Last name" required id="staff-last-name">
+                <FormField label={t('staff.lastName')} required id="staff-last-name">
                   <Input
                     id="staff-last-name"
                     required
                     name="lastName"
-                    placeholder="e.g. Heng"
+                    placeholder={t('staff.lastNamePlaceholder')}
                   />
                 </FormField>
-                <FormField label="Email" required id="staff-email">
+                <FormField label={t('auth.email')} required id="staff-email">
                   <Input
                     id="staff-email"
                     required
                     type="email"
                     name="email"
-                    placeholder="staff@store.com"
+                    placeholder={t('staff.emailPlaceholder')}
                   />
                 </FormField>
                 <FormField
-                  label="Temporary password"
+                  label={t('staff.temporaryPassword')}
                   required
-                  help="Use at least 12 characters."
+                  help={t('staff.passwordHelp')}
                   id="staff-password"
                 >
                   <Input
@@ -318,31 +320,31 @@ export default function StaffPage() {
                     type="password"
                     name="password"
                     minLength={12}
-                    placeholder="12+ characters"
+                    placeholder={t('staff.passwordPlaceholder')}
                   />
                 </FormField>
-                <FormField label="Role" required id="staff-role">
+                <FormField label={t('staff.role')} required id="staff-role">
                   <CustomSelect
                     name="role"
                     value={addRole}
                     onChange={setAddRole}
                     options={[
-                      { value: 'CASHIER', label: 'Cashier — POS' },
+                      { value: 'CASHIER', label: t('staff.cashierPos') },
                       {
                         value: 'MANAGER',
-                        label: 'Manager — store access',
+                        label: t('staff.managerAccess'),
                       },
                     ]}
                   />
                 </FormField>
-                <FormField label="Assigned branch" required id="staff-branch">
+                <FormField label={t('staff.assignedBranch')} required id="staff-branch">
                   <CustomSelect
                     name="branchId"
                     value={addBranchId}
                     onChange={setAddBranchId}
-                    placeholder="Select branch"
+                    placeholder={t('staff.selectBranch')}
                     options={[
-                      { value: '', label: 'Select branch' },
+                      { value: '', label: t('staff.selectBranch') },
                       ...branches.map((branch) => ({
                         value: branch.id,
                         label: `${branch.name} (${branch.code})`,
@@ -351,9 +353,9 @@ export default function StaffPage() {
                   />
                 </FormField>
                 <FormField
-                  label="Terminal PIN"
-                  sublabel="(optional)"
-                  help="4–8 digits for terminal access."
+                  label={t('staff.terminalPin')}
+                  sublabel={t('common.optional')}
+                  help={t('staff.pinHelp')}
                   id="staff-pin"
                   className="md:col-span-2"
                 >
@@ -364,7 +366,7 @@ export default function StaffPage() {
                     inputMode="numeric"
                     pattern="[0-9]{4,8}"
                     maxLength={8}
-                    placeholder="4–8 digits"
+                    placeholder={t('staff.pinPlaceholder')}
                   />
                 </FormField>
                 <Button
@@ -373,14 +375,14 @@ export default function StaffPage() {
                   className="md:col-span-2 md:justify-self-start"
                 >
                   <UserPlus size={16} />
-                  {saving ? 'Adding…' : 'Add staff'}
+                  {saving ? t('staff.adding') : t('staff.add')}
                 </Button>
               </form>
             </SectionCard>
 
             <SectionCard
-              title="Team members"
-              description={`${visibleStaff.length} of ${staff.length} shown`}
+              title={t('staff.teamMembers')}
+              description={t('staff.count', { shown: visibleStaff.length, total: staff.length })}
               icon={<Users size={20} />}
               bodyPadding={false}
             >
@@ -389,7 +391,7 @@ export default function StaffPage() {
                   prefixIcon={<Search size={16} />}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search staff"
+                  placeholder={t('staff.search')}
                 />
               </div>
               {visibleStaff.length ? (
@@ -397,11 +399,11 @@ export default function StaffPage() {
                   <table className="w-full min-w-[700px] border-collapse text-left">
                     <thead className="bg-muted-surface text-xs font-bold uppercase tracking-wider text-text-secondary">
                       <tr className="border-b border-border-subtle">
-                        <th className="px-4 py-3 sm:pl-8">Staff member</th>
-                        <th className="px-4 py-3">Access</th>
-                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 sm:pl-8">{t('staff.member')}</th>
+                        <th className="px-4 py-3">{t('staff.access')}</th>
+                        <th className="px-4 py-3">{t('purchaseOrders.status')}</th>
                         <th className="px-4 py-3 text-right sm:pr-8">
-                          Actions
+                          {t('purchaseOrders.actions')}
                         </th>
                       </tr>
                     </thead>
@@ -423,18 +425,18 @@ export default function StaffPage() {
                           </td>
                           <td className="px-4 py-4">
                             <span className="block text-sm font-semibold capitalize text-text-secondary">
-                              {user.role.toLowerCase()}
+                              {t(`staff.role.${user.role}` as Parameters<typeof t>[0])}
                             </span>
                             <span className="mt-0.5 block text-xs text-text-muted">
-                              {user.branch?.name ?? 'All branches'} ·{' '}
-                              {user.hasPin ? 'PIN ready' : 'No PIN'}
+                              {user.branch?.name ?? t('staff.allBranches')} ·{' '}
+                              {user.hasPin ? t('staff.pinReady') : t('staff.noPin')}
                             </span>
                           </td>
                           <td className="px-4 py-4">
                             <StatusBadge
                               tone={user.isActive ? 'success' : 'neutral'}
                             >
-                              {user.isActive ? 'Active' : 'Inactive'}
+                              {user.isActive ? t('common.active') : t('common.inactive')}
                             </StatusBadge>
                           </td>
                           <td className="px-4 py-4 text-right sm:pr-8">
@@ -446,7 +448,7 @@ export default function StaffPage() {
                                 size="sm"
                               >
                                 <Shield size={15} />
-                                Manage
+                                {t('staff.manage')}
                               </Button>
                             )}
                           </td>
@@ -458,11 +460,11 @@ export default function StaffPage() {
               ) : (
                 <EmptyState
                   icon={<Users size={24} />}
-                  title="No staff found"
+                  title={t('staff.empty')}
                   description={
                     query
-                      ? 'Try another search.'
-                      : 'Add your first staff member.'
+                      ? t('staff.emptySearchHelp')
+                      : t('staff.emptyHelp')
                   }
                 />
               )}
@@ -477,10 +479,10 @@ export default function StaffPage() {
             type="button"
             variant="overlay"
             className="absolute inset-0 h-auto w-auto rounded-none p-0"
-            aria-label="Close staff access panel"
+            aria-label={t('staff.closePanel')}
             onClick={() => setEditing(null)}
           >
-            <span className="sr-only">Close staff access panel</span>
+            <span className="sr-only">{t('staff.closePanel')}</span>
           </Button>
           <aside
             className="fixed inset-y-0 right-0 z-[81] flex h-dvh w-full max-w-md flex-col overflow-hidden border-l border-border-subtle bg-card shadow-xl"
@@ -498,7 +500,7 @@ export default function StaffPage() {
                     id="staff-drawer-title"
                     className="m-0 text-base font-bold tracking-tight text-text-main sm:text-lg"
                   >
-                    Manage access
+                    {t('staff.manageAccess')}
                   </h2>
                   <p className="mt-0.5 mb-0 truncate text-xs text-text-muted">
                     {editing.firstName} {editing.lastName} · {editing.email}
@@ -510,7 +512,7 @@ export default function StaffPage() {
                 variant="iconBareDanger"
                 size="bareIcon"
                 className="shrink-0"
-                aria-label="Close staff access panel"
+                aria-label={t('staff.closePanel')}
                 onClick={() => setEditing(null)}
               >
                 <X size={19} />
@@ -526,33 +528,33 @@ export default function StaffPage() {
                 >
                   <div>
                     <h3 className="m-0 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                      Access settings
+                      {t('staff.accessSettings')}
                     </h3>
                     <p className="mt-1 mb-0 text-xs text-text-muted">
-                      Set role and status.
+                      {t('staff.accessSettingsHelp')}
                     </p>
                   </div>
-                  <FormField label="Role" required>
+                  <FormField label={t('staff.role')} required>
                     <CustomSelect
                       name="role"
                       value={editRole}
                       onChange={setEditRole}
                       options={[
                         ...(editing.role === 'OWNER'
-                          ? [{ value: 'OWNER', label: 'Owner' }]
+                          ? [{ value: 'OWNER', label: t('staff.role.OWNER') }]
                           : []),
-                        { value: 'CASHIER', label: 'Cashier' },
-                        { value: 'MANAGER', label: 'Manager' },
+                        { value: 'CASHIER', label: t('staff.role.CASHIER') },
+                        { value: 'MANAGER', label: t('staff.role.MANAGER') },
                       ]}
                     />
                   </FormField>
-                  <FormField label="Branch" required>
+                  <FormField label={t('entity.branch')} required>
                     <CustomSelect
                       name="branchId"
                       value={editBranchId}
                       onChange={setEditBranchId}
                       options={[
-                        { value: '', label: 'No branch assigned' },
+                        { value: '', label: t('staff.noBranch') },
                         ...branches.map((branch) => ({
                           value: branch.id,
                           label: branch.name,
@@ -560,14 +562,14 @@ export default function StaffPage() {
                       ]}
                     />
                   </FormField>
-                  <FormField label="Account status" required>
+                  <FormField label={t('staff.accountStatus')} required>
                     <CustomSelect
                       name="isActive"
                       value={editIsActive}
                       onChange={setEditIsActive}
                       options={[
-                        { value: 'true', label: 'Active' },
-                        { value: 'false', label: 'Inactive' },
+                        { value: 'true', label: t('common.active') },
+                        { value: 'false', label: t('common.inactive') },
                       ]}
                     />
                   </FormField>
@@ -576,17 +578,17 @@ export default function StaffPage() {
                 <div className="border-t border-border-subtle pt-6">
                   <div className="mb-4">
                     <h3 className="m-0 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                      Security
+                      {t('staff.security')}
                     </h3>
                     <p className="mt-1 mb-0 text-xs text-text-muted">
-                      Update PIN and password.
+                      {t('staff.securityHelp')}
                     </p>
                   </div>
                   <div className="flex flex-col gap-4">
                     <form onSubmit={setPin} className="flex flex-col gap-2">
                       <FormField
-                        label="Terminal PIN"
-                        help="New 4–8 digit PIN."
+                        label={t('staff.terminalPin')}
+                        help={t('staff.newPinHelp')}
                         id="edit-staff-pin"
                       >
                         <div className="flex flex-col gap-2 sm:flex-row">
@@ -599,7 +601,7 @@ export default function StaffPage() {
                             pattern="[0-9]{4,8}"
                             minLength={4}
                             maxLength={8}
-                            placeholder="4–8 digit PIN"
+                            placeholder={t('staff.pinPlaceholder')}
                           />
                           <Button
                             type="submit"
@@ -607,7 +609,7 @@ export default function StaffPage() {
                             className="shrink-0"
                           >
                             <KeyRound size={16} />
-                            Save PIN
+                            {t('staff.savePin')}
                           </Button>
                         </div>
                       </FormField>
@@ -617,8 +619,8 @@ export default function StaffPage() {
                       className="flex flex-col gap-2"
                     >
                       <FormField
-                        label="New password"
-                        help="Use at least 12 characters."
+                        label={t('staff.newPassword')}
+                        help={t('staff.passwordHelp')}
                         id="edit-staff-password"
                       >
                         <div className="flex flex-col gap-2 sm:flex-row">
@@ -628,7 +630,7 @@ export default function StaffPage() {
                             name="password"
                             type="password"
                             minLength={12}
-                            placeholder="12+ characters"
+                            placeholder={t('staff.passwordPlaceholder')}
                           />
                           <Button
                             type="submit"
@@ -636,7 +638,7 @@ export default function StaffPage() {
                             className="shrink-0"
                           >
                             <Lock size={16} />
-                            Reset
+                            {t('staff.reset')}
                           </Button>
                         </div>
                       </FormField>
@@ -652,7 +654,7 @@ export default function StaffPage() {
                   onClick={() => setEditing(null)}
                   className="max-sm:flex-1"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="submit"
@@ -661,7 +663,7 @@ export default function StaffPage() {
                   className="max-sm:flex-1"
                 >
                   <Shield size={16} />
-                  {saving ? 'Saving…' : 'Save access'}
+                  {saving ? t('common.saving') : t('staff.saveAccess')}
                 </Button>
               </footer>
             </div>

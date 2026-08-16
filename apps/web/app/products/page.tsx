@@ -51,6 +51,7 @@ import {
   PageHeading,
 } from '../../components/ui/';
 import { TabButton, TabCountBadge } from '../../components/ui/tab-button';
+import { useI18n } from '../../lib/i18n';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 type ModifierOption = { id: string; name: string; priceAdjustment: number };
@@ -175,6 +176,7 @@ export default function ProductsPage({
   editorProductId,
   createProduct = false,
 }: ProductsPageProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const isEditorRoute = createProduct || Boolean(editorProductId);
   const [activeTab, setActiveTab] = useState<TabType>(
@@ -500,13 +502,13 @@ export default function ProductsPage({
     const raw = await response.text();
     if (!raw)
       throw new Error(
-        'The server returned an empty response. Please refresh and try again.',
+        t('products.error.emptyResponse'),
       );
     try {
       return JSON.parse(raw) as T;
     } catch {
       throw new Error(
-        'The server returned an invalid response. Please refresh and try again.',
+        t('products.error.invalidResponse'),
       );
     }
   }
@@ -529,7 +531,7 @@ export default function ProductsPage({
       !categoriesResponse.ok ||
       !optionSetsResponse.ok
     )
-      throw new Error('Please sign in again.');
+      throw new Error(t('products.error.signIn'));
     const [productData, categoryData, optionSetData] = await Promise.all([
       readJson<Product[]>(productsResponse),
       readJson<Category[]>(categoriesResponse),
@@ -583,16 +585,16 @@ export default function ProductsPage({
       });
       const data = await response.json();
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to upload image.');
+        throw new Error(data.message ?? t('products.error.uploadImage'));
       const fullUrl = data.imageUrl.startsWith('http')
         ? data.imageUrl
         : `${api}${data.imageUrl}`;
       if (editingImage) setEditImageUrl(fullUrl);
       else setNewImageUrl(fullUrl);
-      notify('Image uploaded successfully. Save product to complete.');
+      notify(t('products.success.imageUploaded'));
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to upload image.',
+        error instanceof Error ? error.message : t('products.error.uploadImage'),
         'error',
       );
     } finally {
@@ -657,7 +659,7 @@ export default function ProductsPage({
         headers: { Authorization: `Bearer ${token}` },
       },
     );
-    if (!response.ok) throw new Error('Unable to load product suppliers.');
+    if (!response.ok) throw new Error(t('products.error.loadProductSuppliers'));
     setSupplierCatalog(await readJson<SupplierCatalogItem[]>(response));
   }
 
@@ -666,7 +668,7 @@ export default function ProductsPage({
       `${api}/products/${productId}/supplier-price-history`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
-    if (!response.ok) throw new Error('Unable to load supplier price history.');
+    if (!response.ok) throw new Error(t('products.error.loadSupplierHistory'));
     setSupplierPriceHistory(
       await readJson<SupplierPriceHistoryItem[]>(response),
     );
@@ -676,7 +678,7 @@ export default function ProductsPage({
     const response = await fetch(`${api}/suppliers`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!response.ok) throw new Error('Unable to load suppliers.');
+    if (!response.ok) throw new Error(t('products.error.loadSuppliers'));
     setSuppliers(await readJson<Supplier[]>(response));
   }
 
@@ -703,7 +705,7 @@ export default function ProductsPage({
     if (!editing || !supplierId) return;
     const cost = supplierLastCost.trim();
     if (cost && (!Number.isFinite(Number(cost)) || Number(cost) < 0)) {
-      notify('Enter a valid supplier cost.', 'error');
+      notify(t('products.error.validSupplierCost'), 'error');
       return;
     }
     setSavingSupplierCatalog(true);
@@ -727,16 +729,16 @@ export default function ProductsPage({
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to save supplier details.');
+        throw new Error(data.message ?? t('products.error.saveSupplier'));
       await loadSupplierCatalog(editing.id);
       await loadSupplierPriceHistory(editing.id);
       resetSupplierCatalogForm();
-      notify('Supplier details saved.');
+      notify(t('products.success.supplierSaved'));
     } catch (error) {
       notify(
         error instanceof Error
           ? error.message
-          : 'Unable to save supplier details.',
+          : t('products.error.saveSupplier'),
         'error',
       );
     } finally {
@@ -787,17 +789,17 @@ export default function ProductsPage({
           );
           if (!response.ok) {
             const data = await response.json().catch(() => ({}));
-            throw new Error(data.message ?? `Unable to save ${variant.name}.`);
+            throw new Error(data.message ?? t('products.error.saveNamed', { name: variant.name }));
           }
         }),
       );
       await Promise.all(results);
-      notify('Variant prices and identifiers saved.');
+      notify(t('products.success.variantsSaved'));
       await loadExistingVariants(variantProductId);
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to save variants.',
+        error instanceof Error ? error.message : t('products.error.saveVariants'),
         'error',
       );
     } finally {
@@ -815,14 +817,14 @@ export default function ProductsPage({
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to delete variant.');
+        throw new Error(data.message ?? t('products.error.deleteVariant'));
       setPendingExistingVariantDelete(null);
       await loadExistingVariants(variantProductId);
       await load();
-      notify('Variant deleted.');
+      notify(t('products.success.variantDeleted'));
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to delete variant.',
+        error instanceof Error ? error.message : t('products.error.deleteVariant'),
         'error',
       );
     } finally {
@@ -834,7 +836,7 @@ export default function ProductsPage({
     if (!stockAdjustmentVariant) return;
     const quantityChange = Number(stockAdjustmentQuantity);
     if (!Number.isInteger(quantityChange) || quantityChange === 0) {
-      notify('Enter a whole stock change, for example 10 or -2.', 'error');
+      notify(t('products.error.wholeStockChange'), 'error');
       return;
     }
     setSavingStockAdjustment(true);
@@ -844,7 +846,7 @@ export default function ProductsPage({
       });
       const user = await me.json().catch(() => ({}));
       if (!me.ok || !user.branchId)
-        throw new Error('Choose an active branch before adjusting stock.');
+        throw new Error(t('products.error.chooseBranch'));
       const response = await fetch(`${api}/inventory/adjustments`, {
         method: 'POST',
         headers: {
@@ -860,14 +862,14 @@ export default function ProductsPage({
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to adjust stock.');
+        throw new Error(data.message ?? t('products.error.adjustStock'));
       setStockAdjustmentVariant(null);
       setStockAdjustmentQuantity('');
       await loadExistingVariants(variantProductId);
-      notify('Stock adjusted and recorded.');
+      notify(t('products.success.stockAdjusted'));
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to adjust stock.',
+        error instanceof Error ? error.message : t('products.error.adjustStock'),
         'error',
       );
     } finally {
@@ -888,7 +890,7 @@ export default function ProductsPage({
       });
       const uploaded = await upload.json();
       if (!upload.ok)
-        throw new Error(uploaded.message ?? 'Unable to upload image.');
+        throw new Error(uploaded.message ?? t('products.error.uploadImage'));
       const imageUrl = uploaded.imageUrl.startsWith('http')
         ? uploaded.imageUrl
         : `${api}${uploaded.imageUrl}`;
@@ -905,14 +907,14 @@ export default function ProductsPage({
       );
       const data = await saved.json();
       if (!saved.ok)
-        throw new Error(data.message ?? 'Unable to save variant image.');
+        throw new Error(data.message ?? t('products.error.saveVariantImage'));
       await loadVariantOptionGalleries();
-      notify('Variant gallery image added.');
+      notify(t('products.success.variantImageAdded'));
     } catch (error) {
       notify(
         error instanceof Error
           ? error.message
-          : 'Unable to upload variant image.',
+          : t('products.error.uploadVariantImage'),
         'error',
       );
     } finally {
@@ -931,11 +933,11 @@ export default function ProductsPage({
     );
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      notify(data.message ?? 'Unable to remove image.', 'error');
+      notify(data.message ?? t('products.error.removeImage'), 'error');
       return;
     }
     await loadVariantOptionGalleries();
-    notify('Variant gallery image removed.');
+    notify(t('products.success.variantImageRemoved'));
   }
 
   async function saveVariantValueName() {
@@ -953,13 +955,13 @@ export default function ProductsPage({
     );
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      notify(data.message ?? 'Unable to rename variant value.', 'error');
+      notify(data.message ?? t('products.error.renameVariantValue'), 'error');
       return;
     }
     setEditingVariantValue(null);
     await loadVariantOptionGalleries();
     await load();
-    notify('Variant value renamed.');
+    notify(t('products.success.variantValueRenamed'));
   }
 
   async function deleteVariantValue() {
@@ -975,14 +977,14 @@ export default function ProductsPage({
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        notify(data.message ?? 'Unable to delete variant value.', 'error');
+        notify(data.message ?? t('products.error.deleteVariantValue'), 'error');
         return;
       }
       setPendingVariantValueDelete(null);
       await loadVariantOptionGalleries();
       await load();
       notify(
-        `Deleted ${data.deletedVariants ?? 0} related variant${data.deletedVariants === 1 ? '' : 's'} and the value.`,
+        t('products.success.variantValueDeleted', { count: data.deletedVariants ?? 0 }),
       );
     } finally {
       setDeletingVariantValue(false);
@@ -1005,18 +1007,18 @@ export default function ProductsPage({
   async function chooseCsv(file?: File) {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      notify('Choose a valid CSV file.', 'error');
+      notify(t('products.error.validCsv'), 'error');
       return;
     }
     const text = await file.text();
     setCsvText(text);
     setImportPreview(null);
-    notify(`Loaded ${file.name}. Click Preview CSV to validate.`);
+    notify(t('products.success.csvLoadedNamed', { name: file.name }));
   }
 
   async function previewCsv() {
     if (!csvText) {
-      notify('Choose a CSV file first.', 'error');
+      notify(t('products.error.chooseCsv'), 'error');
       return;
     }
     const response = await fetch(`${api}/products/import-preview`, {
@@ -1030,14 +1032,14 @@ export default function ProductsPage({
     const raw = await response.text();
     const data = raw ? JSON.parse(raw) : {};
     if (!response.ok) {
-      notify(data.message ?? 'Unable to preview CSV.', 'error');
+      notify(data.message ?? t('products.error.previewCsv'), 'error');
       return;
     }
     setImportPreview(data);
     notify(
       data.valid
-        ? `${data.totalRows} products ready to import.`
-        : 'Fix CSV errors before importing.',
+        ? t('products.success.readyToImport', { count: data.totalRows })
+        : t('products.error.fixCsv'),
       data.valid ? 'success' : 'error',
     );
   }
@@ -1055,12 +1057,12 @@ export default function ProductsPage({
     const raw = await response.text();
     const data = raw ? JSON.parse(raw) : {};
     if (!response.ok) {
-      notify(data.message ?? 'Unable to import products.', 'error');
+      notify(data.message ?? t('products.error.importProducts'), 'error');
       return;
     }
     setCsvText('');
     setImportPreview(null);
-    notify(`${data.created} products imported successfully.`);
+    notify(t('products.success.imported', { count: data.created }));
     await load();
     selectWorkspaceTab('catalog');
   }
@@ -1098,7 +1100,7 @@ export default function ProductsPage({
     });
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to save product.', 'error');
+      notify(data.message ?? t('products.error.saveProduct'), 'error');
       return;
     }
     setNewImageUrl('');
@@ -1119,11 +1121,11 @@ export default function ProductsPage({
     });
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to create category.', 'error');
+      notify(data.message ?? t('products.error.createCategory'), 'error');
       return;
     }
     formElement.reset();
-    notify(`Category "${data.name}" created.`);
+    notify(t('products.success.categoryCreated', { name: data.name }));
     await load();
   }
 
@@ -1148,11 +1150,11 @@ export default function ProductsPage({
     );
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to update category.', 'error');
+      notify(data.message ?? t('products.error.updateCategory'), 'error');
       return;
     }
     setEditingCategory(null);
-    notify(`Category renamed to “${data.name}”.`);
+    notify(t('products.success.categoryRenamed', { name: data.name }));
     await load();
   }
 
@@ -1165,11 +1167,11 @@ export default function ProductsPage({
     const data = await response.json();
     setDeletingCategory(false);
     if (!response.ok) {
-      notify(data.message ?? 'Unable to delete category.', 'error');
+      notify(data.message ?? t('products.error.deleteCategory'), 'error');
       return;
     }
     setPendingCategoryDelete(null);
-    notify(data.message ?? `Category “${category.name}” deleted.`);
+    notify(data.message ?? t('products.success.categoryDeleted', { name: category.name }));
     await load();
   }
 
@@ -1235,11 +1237,11 @@ export default function ProductsPage({
     });
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to update product.', 'error');
+      notify(data.message ?? t('products.error.updateProduct'), 'error');
       return;
     }
     notify(
-      'Product details saved. Continue below to manage variants and options.',
+      t('products.success.detailsSaved'),
     );
     await load();
   }
@@ -1255,7 +1257,7 @@ export default function ProductsPage({
     });
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to update product.', 'error');
+      notify(data.message ?? t('products.error.updateProduct'), 'error');
       return;
     }
     setEditing((current) =>
@@ -1263,7 +1265,7 @@ export default function ProductsPage({
         ? { ...current, isActive: data.isActive }
         : current,
     );
-    notify(product.isActive ? 'Product deactivated.' : 'Product activated.');
+    notify(product.isActive ? t('products.success.deactivated') : t('products.success.activated'));
     await load();
   }
 
@@ -1278,12 +1280,12 @@ export default function ProductsPage({
       if (!response.ok) {
         notify(
           data.message ??
-            'Unable to delete product. Deactivate it to keep its history.',
+            t('products.error.deleteProduct'),
           'error',
         );
         return;
       }
-      notify('Product deleted.');
+      notify(t('products.success.deleted'));
       await load();
     } finally {
       setDeletingProduct(false);
@@ -1317,12 +1319,12 @@ export default function ProductsPage({
     });
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to create option set.', 'error');
+      notify(data.message ?? t('products.error.createOptionSet'), 'error');
       return;
     }
     formElement.reset();
     setPreset('DRINK_SIZES');
-    notify(`Option set "${data.name}" created.`);
+    notify(t('products.success.optionSetCreated', { name: data.name }));
     await load();
   }
 
@@ -1342,10 +1344,10 @@ export default function ProductsPage({
     );
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to apply option set.', 'error');
+      notify(data.message ?? t('products.error.applyOptionSet'), 'error');
       return;
     }
-    notify('Option set applied to product.');
+    notify(t('products.success.optionSetApplied'));
     await load();
   }
 
@@ -1386,10 +1388,10 @@ export default function ProductsPage({
     );
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to save option prices.', 'error');
+      notify(data.message ?? t('products.error.saveOptionPrices'), 'error');
       return;
     }
-    notify('Option prices saved.');
+    notify(t('products.success.optionPricesSaved'));
     await load();
   }
 
@@ -1403,11 +1405,11 @@ export default function ProductsPage({
     );
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to remove modifier group.', 'error');
+      notify(data.message ?? t('products.error.removeModifierGroup'), 'error');
       return;
     }
     if (pricedProductId === productId) selectProductForPrices(productId);
-    notify('Modifier group removed.');
+    notify(t('products.success.modifierGroupRemoved'));
     await load();
   }
 
@@ -1421,10 +1423,10 @@ export default function ProductsPage({
     );
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to remove modifier option.', 'error');
+      notify(data.message ?? t('products.error.removeModifierOption'), 'error');
       return;
     }
-    notify('Modifier option removed.');
+    notify(t('products.success.modifierOptionRemoved'));
     await load();
   }
 
@@ -1455,12 +1457,12 @@ export default function ProductsPage({
     );
     const data = await response.json();
     if (!response.ok) {
-      notify(data.message ?? 'Unable to add modifier.', 'error');
+      notify(data.message ?? t('products.error.addModifier'), 'error');
       return;
     }
     formElement.reset();
     setModifierGroup('Size');
-    notify('Modifier option added.');
+    notify(t('products.success.modifierOptionAdded'));
     await load();
   }
 
@@ -1493,7 +1495,7 @@ export default function ProductsPage({
     );
     if (combinations.length > 100) {
       setVariantDrafts([]);
-      notify('Use up to 100 variant combinations per product.', 'error');
+      notify(t('products.error.variantLimit'), 'error');
       return;
     }
     const slug = (value: string) =>
@@ -1573,7 +1575,7 @@ export default function ProductsPage({
   function applyBulkVariantValues() {
     if (!selectedVariantDrafts.length) return;
     if (bulkVariantPrice === '' && bulkVariantStock === '') {
-      notify('Enter a price or opening stock value to apply.', 'error');
+      notify(t('products.error.bulkValue'), 'error');
       return;
     }
     const selected = new Set(selectedVariantDrafts);
@@ -1591,7 +1593,7 @@ export default function ProductsPage({
       ),
     );
     notify(
-      `Updated ${selectedVariantDrafts.length} variant${selectedVariantDrafts.length === 1 ? '' : 's'}.`,
+      t('products.success.variantsUpdated', { count: selectedVariantDrafts.length }),
     );
   }
 
@@ -1632,13 +1634,13 @@ export default function ProductsPage({
       } catch {
         /* handled below */
       }
-      notify(data.message ?? 'Unable to save variants.', 'error');
+      notify(data.message ?? t('products.error.saveVariants'), 'error');
       return;
     }
     setVariantDrafts([]);
     setSelectedVariantDrafts([]);
     notify(
-      `${variantDrafts.length} variant${variantDrafts.length === 1 ? '' : 's'} created.`,
+      t('products.success.variantsCreated', { count: variantDrafts.length }),
     );
     await load();
     await loadVariantOptionGalleries();
@@ -1684,11 +1686,11 @@ export default function ProductsPage({
     const raw = await response.text();
     const data = raw ? JSON.parse(raw) : {};
     if (!response.ok) {
-      notify(data.message ?? 'Unable to update variant.', 'error');
+      notify(data.message ?? t('products.error.updateVariant'), 'error');
       return;
     }
     setEditingVariant(null);
-    notify('Variant updated.');
+    notify(t('products.success.variantUpdated'));
     await load();
   }
 
@@ -1710,10 +1712,10 @@ export default function ProductsPage({
     const raw = await response.text();
     const data = raw ? JSON.parse(raw) : {};
     if (!response.ok) {
-      notify(data.message ?? 'Unable to update variant.', 'error');
+      notify(data.message ?? t('products.error.updateVariant'), 'error');
       return;
     }
-    notify(variant.isActive ? 'Variant deactivated.' : 'Variant activated.');
+    notify(variant.isActive ? t('products.success.variantDeactivated') : t('products.success.variantActivated'));
     await load();
   }
 
@@ -1751,13 +1753,13 @@ export default function ProductsPage({
   return (
     <main className="w-full pb-16">
       <PageHeading
-        eyebrow="Catalog management"
-        title="Products"
+        eyebrow={t('products.eyebrow')}
+        title={t('entity.products')}
         actions={
           !isEditorRoute ? (
             <Button onClick={() => router.push('/products/new')}>
               <Plus size={18} />
-              New Product
+              {t('products.new')}
             </Button>
           ) : undefined
         }
@@ -1767,17 +1769,17 @@ export default function ProductsPage({
               {[
                 {
                   id: 'catalog',
-                  label: 'All Products',
+                  label: t('products.all'),
                   icon: Package,
                   count: products.length,
                 },
                 {
                   id: 'categories',
-                  label: 'Categories',
+                  label: t('products.categories'),
                   icon: Tag,
                   count: categories.length,
                 },
-                { id: 'import', label: 'CSV Import', icon: Upload },
+                { id: 'import', label: t('products.csvImport'), icon: Upload },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1832,7 +1834,7 @@ export default function ProductsPage({
               variant="ghost"
               size="sm"
               className="h-7 w-7 rounded-md border-0 p-0 text-inherit hover:bg-black/5"
-              aria-label="Dismiss message"
+              aria-label={t('dashboard.dismissMessage')}
             >
               <X size={16} />
             </Button>
@@ -1854,7 +1856,7 @@ export default function ProductsPage({
                 />
                 <Input
                   type="search"
-                  placeholder="Search products by name, SKU, or barcode..."
+                  placeholder={t('products.search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -1869,7 +1871,7 @@ export default function ProductsPage({
                 options={[
                   {
                     value: '',
-                    label: 'All Categories',
+                    label: t('products.allCategories'),
                     count: products.length,
                   },
                   ...categories.map((category) => ({
@@ -1884,20 +1886,26 @@ export default function ProductsPage({
 
               {/* Status Filter Segment Control */}
               <div className="flex h-10 items-center rounded-md border border-border-subtle bg-app p-[3px] max-[520px]:w-full">
-                {(['all', 'active', 'inactive'] as const).map((st) => (
+                {(
+                  [
+                    { value: 'all', label: t('common.all') },
+                    { value: 'active', label: t('common.active') },
+                    { value: 'inactive', label: t('common.inactive') },
+                  ] as const
+                ).map(({ value, label }) => (
                   <Button
-                    key={st}
+                    key={value}
                     type="button"
-                    onClick={() => setStatusFilter(st)}
-                    variant={statusFilter === st ? 'secondary' : 'ghost'}
+                    onClick={() => setStatusFilter(value)}
+                    variant={statusFilter === value ? 'secondary' : 'ghost'}
                     size="sm"
                     className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-sm border px-3.5 text-sm font-semibold capitalize transition max-[520px]:flex-1 ${
-                      statusFilter === st
+                      statusFilter === value
                         ? 'border-border-default font-bold text-text-main shadow-sm'
                         : 'border-transparent bg-transparent text-text-muted hover:text-text-main'
                     }`}
                   >
-                    {st}
+                    {label}
                   </Button>
                 ))}
               </div>
@@ -1907,8 +1915,8 @@ export default function ProductsPage({
             {filteredProducts.length === 0 ? (
               <div className="rounded-lg border border-border-subtle bg-card shadow-sm">
                 <EmptyState
-                  title="No products found"
-                  description="Try clearing active filters or create a new product for your catalog."
+                  title={t('products.emptyTitle')}
+                  description={t('products.emptyDescription')}
                   icon={<Package size={22} strokeWidth={2} />}
                   className="py-8"
                 />
@@ -1925,7 +1933,7 @@ export default function ProductsPage({
                         setStatusFilter('all');
                       }}
                     >
-                      Clear filters
+                      {t('products.clearFilters')}
                     </Button>
                   ) : (
                     <Button
@@ -1933,7 +1941,7 @@ export default function ProductsPage({
                       onClick={() => router.push('/products/new')}
                     >
                       <Plus size={16} />
-                      Add First Product
+                      {t('products.addFirst')}
                     </Button>
                   )}
                 </div>
@@ -1945,14 +1953,14 @@ export default function ProductsPage({
                     <tr className="border-b border-border-default bg-muted-surface text-xs font-bold uppercase tracking-wide text-text-secondary [&>th]:px-[18px] [&>th]:py-3">
                       <th
                         className="w-9 text-center"
-                        aria-label="Drag handle"
+                        aria-label={t('products.dragHandle')}
                       />
-                      <th>Product &amp; SKU</th>
-                      <th>Category</th>
-                      <th>Variants</th>
-                      <th>Price</th>
-                      <th>Status</th>
-                      <th className="text-right">Actions</th>
+                      <th>{t('products.productSku')}</th>
+                      <th>{t('products.category')}</th>
+                      <th>{t('products.variants')}</th>
+                      <th>{t('products.price')}</th>
+                      <th>{t('products.status')}</th>
+                      <th className="text-right">{t('products.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1980,8 +1988,8 @@ export default function ProductsPage({
                               }`}
                               title={
                                 canDragProducts
-                                  ? 'Drag to reorder product order'
-                                  : 'Clear search and filters to reorder products'
+                                  ? t('products.dragReorder')
+                                  : t('products.clearToReorder')
                               }
                             >
                               <GripVertical size={16} />
@@ -2036,12 +2044,16 @@ export default function ProductsPage({
                             <td>
                               {product.variants.length > 0 ? (
                                 <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">
-                                  {product.variants.length} variant
-                                  {product.variants.length === 1 ? '' : 's'}
+                                  {t(
+                                    product.variants.length === 1
+                                      ? 'products.variantCount'
+                                      : 'products.variantCountPlural',
+                                    { count: product.variants.length },
+                                  )}
                                 </span>
                               ) : (
                                 <span className="text-[0.82rem] font-medium text-text-muted">
-                                  Single
+                                  {t('products.single')}
                                 </span>
                               )}
                             </td>
@@ -2080,13 +2092,15 @@ export default function ProductsPage({
                                 size="status"
                                 title={
                                   product.isActive
-                                    ? 'Click to deactivate product'
-                                    : 'Click to activate product'
+                                    ? t('products.deactivate')
+                                    : t('products.activate')
                                 }
                                 className="gap-1.5 rounded-full"
                               >
                                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                                {product.isActive ? 'Active' : 'Inactive'}
+                                {product.isActive
+                                  ? t('common.active')
+                                  : t('common.inactive')}
                               </Button>
                             </td>
 
@@ -2097,16 +2111,20 @@ export default function ProductsPage({
                                   variant="secondary"
                                   size="sm"
                                   onClick={() => startEdit(product)}
-                                  title={`Edit ${product.name}`}
+                                  title={t('products.editNamed', {
+                                    name: product.name,
+                                  })}
                                 >
                                   <Edit2 size={13} />
-                                  Edit
+                                  {t('common.edit')}
                                 </Button>
                                 <Button
                                   variant="dangerSubtle"
                                   size="icon"
-                                  aria-label={`Delete ${product.name}`}
-                                  title="Delete product"
+                                  aria-label={t('products.deleteNamed', {
+                                    name: product.name,
+                                  })}
+                                  title={t('products.deleteProduct')}
                                   onClick={() => setPendingDelete(product)}
                                   className="h-9 w-9"
                                 >
@@ -2194,14 +2212,14 @@ export default function ProductsPage({
         {isEditorRoute && editing && (
           <nav
             className="mb-6 flex items-center gap-7 overflow-x-auto border-b border-border-subtle [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            aria-label="Product editor sections"
+            aria-label={t('products.editorSections')}
           >
             {[
-              { key: 'details', label: 'Basic details', icon: Sliders },
-              { key: 'suppliers', label: 'Suppliers', icon: Package },
+              { key: 'details', label: t('products.basicDetails'), icon: Sliders },
+              { key: 'suppliers', label: t('entity.suppliers'), icon: Package },
               {
                 key: 'variants',
-                label: 'Variants',
+                label: t('products.variants'),
                 count: editing.variants.length,
                 icon: Layers,
               },
@@ -2233,8 +2251,8 @@ export default function ProductsPage({
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-6 sm:px-8">
               <h2 className="text-base font-bold tracking-tight text-text-main">
                 {editing
-                  ? `Product editor — ${editing.name}`
-                  : 'Add new product'}
+                  ? t('products.editorTitle', { name: editing.name })
+                  : t('products.addNew')}
               </h2>
               <div className="flex items-center gap-2">
                 <Button
@@ -2243,10 +2261,10 @@ export default function ProductsPage({
                   size="sm"
                   onClick={() => router.push('/products')}
                 >
-                  Back to products
+                  {t('products.back')}
                 </Button>
                 <Button type="submit" form="product-editor-form" size="sm">
-                  {editing ? 'Save product' : 'Create product'}
+                  {editing ? t('products.save') : t('products.create')}
                 </Button>
               </div>
             </div>
@@ -2258,17 +2276,17 @@ export default function ProductsPage({
             >
               <div>
                 <p className="m-0 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                  Product details
+                  {t('products.details')}
                 </p>
                 <p className="mt-1 text-xs text-text-muted">
-                  The basic information staff use to find and sell this product.
+                  {t('products.detailsHelp')}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] items-start">
                 {/* Left Column: Form Fields */}
                 <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2 items-start">
                   {/* Product Name */}
-                  <FormField label="Product Name" required>
+                  <FormField label={t('products.name')} required>
                     <Input
                       key={editing ? 'edit-name' : 'new-name'}
                       required
@@ -2277,7 +2295,7 @@ export default function ProductsPage({
                         editing ? (e) => setEditName(e.target.value) : undefined
                       }
                       name={editing ? undefined : 'name'}
-                      placeholder="e.g. Iced Latte"
+                      placeholder={t('products.namePlaceholder')}
                     />
                   </FormField>
 
@@ -2291,12 +2309,15 @@ export default function ProductsPage({
                         editing ? (e) => setEditSku(e.target.value) : undefined
                       }
                       name={editing ? undefined : 'sku'}
-                      placeholder="COFFEE-LATTE"
+                      placeholder={t('products.skuPlaceholder')}
                     />
                   </FormField>
 
                   {/* Barcode */}
-                  <FormField label="Barcode" sublabel="(optional)">
+                  <FormField
+                    label={t('products.barcode')}
+                    sublabel={t('common.optional')}
+                  >
                     <div className="flex items-center gap-2">
                       <Input
                         key={editing ? 'edit-barcode' : 'new-barcode'}
@@ -2307,7 +2328,7 @@ export default function ProductsPage({
                             : undefined
                         }
                         name={editing ? undefined : 'barcode'}
-                        placeholder="885000001"
+                        placeholder={t('products.barcodePlaceholder')}
                         className="flex-1"
                       />
                       <Button
@@ -2315,7 +2336,7 @@ export default function ProductsPage({
                         variant="secondary"
                         size="sm"
                         className="h-10 shrink-0 gap-1.5 px-3 font-semibold"
-                        title="Auto-generate a unique barcode"
+                        title={t('products.generateBarcode')}
                         onClick={() => {
                           const generated =
                             '200' +
@@ -2333,13 +2354,13 @@ export default function ProductsPage({
                         }}
                       >
                         <Sparkles size={14} className="text-brand" />
-                        Generate
+                        {t('products.generate')}
                       </Button>
                     </div>
                   </FormField>
 
                   {/* Regular Price */}
-                  <FormField label="Regular Price (USD)" required>
+                  <FormField label={t('products.regularPrice')} required>
                     <Input
                       key={editing ? 'edit-regular-price' : 'new-regular-price'}
                       required
@@ -2361,14 +2382,14 @@ export default function ProductsPage({
                         }
                       }}
                       name={editing ? undefined : 'regularPrice'}
-                      placeholder="3.50"
+                      placeholder={t('products.pricePlaceholder')}
                     />
                   </FormField>
 
                   {/* Cost Price */}
                   <FormField
-                    label="Cost Price (USD)"
-                    sublabel="(used for profit)"
+                    label={t('products.costPrice')}
+                    sublabel={t('products.profitHelp')}
                   >
                     <Input
                       key={editing ? 'edit-cost' : 'new-cost'}
@@ -2388,12 +2409,15 @@ export default function ProductsPage({
                         }
                       }}
                       name={editing ? undefined : 'cost'}
-                      placeholder="e.g. 1.20"
+                      placeholder={t('products.costPlaceholder')}
                     />
                   </FormField>
 
                   {/* Sale Price */}
-                  <FormField label="Sale Price (USD)" sublabel="(optional)">
+                  <FormField
+                    label={t('products.salePrice')}
+                    sublabel={t('common.optional')}
+                  >
                     <Input
                       key={editing ? 'edit-sale-price' : 'new-sale-price'}
                       type="number"
@@ -2414,20 +2438,20 @@ export default function ProductsPage({
                         }
                       }}
                       name={editing ? undefined : 'salePrice'}
-                      placeholder="No sale"
+                      placeholder={t('products.noSale')}
                     />
                   </FormField>
 
                   {/* Category Select */}
-                  <FormField label="Category">
+                  <FormField label={t('products.category')}>
                     <CustomSelect
                       name={editing ? undefined : 'categoryId'}
                       value={editCategoryId}
                       onChange={(val) => setEditCategoryId(val)}
-                      placeholder="No category"
+                      placeholder={t('products.noCategory')}
                       leadingIcon={<Tag size={14} className="text-brand" />}
                       options={[
-                        { value: '', label: 'No category' },
+                        { value: '', label: t('products.noCategory') },
                         ...categories.map((c) => ({
                           value: c.id,
                           label: c.name,
@@ -2438,11 +2462,11 @@ export default function ProductsPage({
 
                   {/* Inventory Alert Level Stepper */}
                   <FormField
-                    label="Inventory alert level"
-                    sublabel="(optional)"
+                    label={t('products.alertLevel')}
+                    sublabel={t('common.optional')}
                     help={
                       !editing
-                        ? 'Leave empty to use the business default.'
+                        ? t('products.defaultAlertHelp')
                         : undefined
                     }
                   >
@@ -2452,7 +2476,7 @@ export default function ProductsPage({
                         variant="secondary"
                         size="sm"
                         className="h-10 w-10 rounded-r-none border-r-0 p-0"
-                        title="Decrease alert level"
+                        title={t('products.decreaseAlert')}
                         onClick={() => {
                           if (editing) {
                             const current = parseInt(
@@ -2501,7 +2525,7 @@ export default function ProductsPage({
                           }
                         }}
                         name={editing ? undefined : 'reorderLevel'}
-                        placeholder="e.g. 5"
+                        placeholder={t('products.alertPlaceholder')}
                         className="rounded-none text-center font-mono"
                       />
                       <Button
@@ -2509,7 +2533,7 @@ export default function ProductsPage({
                         variant="secondary"
                         size="sm"
                         className="h-10 w-10 rounded-l-none border-l-0 p-0"
-                        title="Increase alert level"
+                        title={t('products.increaseAlert')}
                         onClick={() => {
                           if (editing) {
                             const current = parseInt(
@@ -2529,7 +2553,7 @@ export default function ProductsPage({
                 {/* Right Column: Product Image Card */}
                 <div className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-muted-surface p-5">
                   <p className="m-0 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                    Product image
+                    {t('products.image')}
                   </p>
                   <div className="flex flex-col gap-4">
                     <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-md border border-border-default bg-card shadow-2xs">
@@ -2537,13 +2561,13 @@ export default function ProductsPage({
                         <>
                           <img
                             src={editing ? editImageUrl : newImageUrl}
-                            alt="Product preview"
+                            alt={t('products.preview')}
                             className="h-full w-full object-cover"
                           />
                           <Button
                             type="button"
-                            title="Remove image"
-                            aria-label="Remove image"
+                            title={t('products.removeImage')}
+                            aria-label={t('products.removeImage')}
                             onClick={() =>
                               editing ? setEditImageUrl('') : setNewImageUrl('')
                             }
@@ -2558,7 +2582,7 @@ export default function ProductsPage({
                         <div className="flex flex-col items-center justify-center text-slate-400">
                           <ImageIcon size={28} strokeWidth={1.5} />
                           <span className="mt-1 text-xs font-semibold">
-                            No image
+                            {t('products.noImage')}
                           </span>
                         </div>
                       )}
@@ -2566,7 +2590,9 @@ export default function ProductsPage({
                     <div className="flex flex-col gap-3">
                       <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border-default bg-card px-3 text-xs font-semibold text-text-main shadow-2xs transition hover:bg-slate-50 focus:outline-none">
                         <Upload size={14} className="text-text-muted" />
-                        {uploadingImage ? 'Uploading…' : 'Upload image'}
+                        {uploadingImage
+                          ? t('products.uploading')
+                          : t('products.uploadImage')}
                         <input
                           type="file"
                           accept="image/*"
@@ -2577,7 +2603,7 @@ export default function ProductsPage({
                           className="hidden"
                         />
                       </label>
-                      <FormField label="Image link">
+                      <FormField label={t('products.imageLink')}>
                         <Input
                           type="url"
                           prefixIcon={<LinkIcon size={14} />}
@@ -2588,11 +2614,11 @@ export default function ProductsPage({
                               : (e) => setNewImageUrl(e.target.value)
                           }
                           name={editing ? undefined : 'imageUrl'}
-                          placeholder="Paste image link"
+                          placeholder={t('products.imageLinkPlaceholder')}
                         />
                       </FormField>
                       <p className="m-0 text-xs font-medium text-text-muted">
-                        JPG, PNG, WEBP · Max 5 MB
+                        {t('products.imageHelp')}
                       </p>
                     </div>
                   </div>
@@ -2611,12 +2637,12 @@ export default function ProductsPage({
               <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-border-subtle bg-card px-5 py-4 shadow-sm">
                 <div>
                   <h3 className="text-base font-bold text-text-main">
-                    Availability
+                    {t('products.availability')}
                   </h3>
                   <p className="mt-1 text-xs text-text-muted">
                     {editing.isActive
-                      ? 'Available to sell in the POS.'
-                      : 'Hidden from normal POS selling.'}
+                      ? t('products.availableHelp')
+                      : t('products.hiddenHelp')}
                   </p>
                 </div>
                 <Button
@@ -2625,7 +2651,9 @@ export default function ProductsPage({
                   variant={editing.isActive ? 'dangerSubtle' : 'secondary'}
                   size="sm"
                 >
-                  {editing.isActive ? 'Deactivate' : 'Activate'}
+                  {editing.isActive
+                    ? t('products.deactivateAction')
+                    : t('products.activateAction')}
                 </Button>
               </div>
             )}
@@ -2634,19 +2662,17 @@ export default function ProductsPage({
               <section className="overflow-visible rounded-lg border border-border-subtle bg-card shadow-sm">
                 <div className="border-b border-border-subtle px-4 py-6 sm:px-8">
                   <h3 className="text-base font-bold tracking-tight text-text-main">
-                    Suppliers
+                    {t('entity.suppliers')}
                   </h3>
                   <p className="mt-1 text-xs text-text-muted">
-                    Save a supplier SKU and most recent cost for this product or
-                    one of its variants.
+                    {t('suppliers.catalogHelp')}
                   </p>
                 </div>
 
                 <div className="px-4 py-6 sm:px-8">
                   {!suppliers.length ? (
                     <div className="alert alert-warning">
-                      No active suppliers are available. Add a supplier before
-                      linking it to this product.
+                      {t('suppliers.noneActive')}
                     </div>
                   ) : (
                     <form
@@ -2654,13 +2680,13 @@ export default function ProductsPage({
                       className="grid grid-cols-1 items-start gap-x-4 gap-y-4 rounded-lg border border-border-subtle bg-muted-surface p-5 md:grid-cols-2 lg:grid-cols-4"
                     >
                       {/* Supplier Dropdown */}
-                      <FormField label="Supplier">
+                      <FormField label={t('entity.supplier')}>
                         <CustomSelect
                           value={supplierId}
                           onChange={(val) => setSupplierId(val)}
-                          placeholder="Select supplier"
+                          placeholder={t('suppliers.select')}
                           options={[
-                            { value: '', label: 'Select supplier' },
+                            { value: '', label: t('suppliers.select') },
                             ...suppliers.map((s) => ({
                               value: s.id,
                               label: s.name,
@@ -2670,13 +2696,13 @@ export default function ProductsPage({
                       </FormField>
 
                       {/* Applies to Dropdown */}
-                      <FormField label="Applies to">
+                      <FormField label={t('suppliers.appliesTo')}>
                         <CustomSelect
                           value={supplierVariantId}
                           onChange={(val) => setSupplierVariantId(val)}
-                          placeholder="Base product"
+                          placeholder={t('suppliers.baseProduct')}
                           options={[
-                            { value: '', label: 'Base product' },
+                            { value: '', label: t('suppliers.baseProduct') },
                             ...existingVariantDrafts.map((v) => ({
                               value: v.id,
                               label: `${v.name} · ${v.sku}`,
@@ -2686,18 +2712,18 @@ export default function ProductsPage({
                       </FormField>
 
                       {/* Supplier SKU */}
-                      <FormField label="Supplier SKU" sublabel="(optional)">
+                      <FormField label={t('suppliers.sku')} sublabel={t('common.optional')}>
                         <Input
                           value={supplierSku}
                           onChange={(event) =>
                             setSupplierSku(event.target.value)
                           }
-                          placeholder="Supplier item code"
+                          placeholder={t('suppliers.itemCode')}
                         />
                       </FormField>
 
                       {/* Last cost (USD) */}
-                      <FormField label="Last cost (USD)" sublabel="(optional)">
+                      <FormField label={t('suppliers.lastCost')} sublabel={t('common.optional')}>
                         <Input
                           type="number"
                           min="0"
@@ -2715,7 +2741,7 @@ export default function ProductsPage({
                                 setSupplierLastCost(num.toFixed(2));
                             }
                           }}
-                          placeholder="0.00"
+                          placeholder={t('products.zeroMoneyPlaceholder')}
                         />
                       </FormField>
 
@@ -2748,12 +2774,14 @@ export default function ProductsPage({
                             </div>
                             <div>
                               <p className="m-0 text-sm font-bold text-text-main">
-                                Preferred supplier for this{' '}
-                                {supplierVariantId ? 'variant' : 'product'}
+                                {t(
+                                  supplierVariantId
+                                    ? 'suppliers.preferredForVariant'
+                                    : 'suppliers.preferredForProduct',
+                                )}
                               </p>
                               <p className="m-0 text-xs font-medium text-text-muted">
-                                Prioritize this supplier when reordering
-                                inventory.
+                                {t('suppliers.preferredHelp')}
                               </p>
                             </div>
                           </div>
@@ -2783,10 +2811,10 @@ export default function ProductsPage({
                           variant="secondary"
                           size="sm"
                         >
-                          Clear
+                          {t('common.clear')}
                         </Button>
                         <Button disabled={savingSupplierCatalog} size="sm">
-                          {savingSupplierCatalog ? 'Saving…' : 'Save supplier'}
+                          {savingSupplierCatalog ? t('suppliers.saving') : t('suppliers.save')}
                         </Button>
                       </div>
                     </form>
@@ -2796,20 +2824,22 @@ export default function ProductsPage({
                     <div className="mt-6 overflow-hidden rounded-lg border border-border-subtle bg-card shadow-2xs">
                       <div className="border-b border-border-subtle bg-muted-surface px-4 py-3">
                         <h4 className="m-0 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                          Linked Suppliers ({supplierCatalog.length})
+                          {t('suppliers.linkedCount', {
+                            count: supplierCatalog.length,
+                          })}
                         </h4>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                           <thead>
                             <tr className="border-b border-border-subtle bg-muted-surface text-[0.72rem] font-bold uppercase tracking-wider text-text-secondary select-none">
-                              <th className="px-4 py-3">Supplier</th>
-                              <th className="px-4 py-3">Applies To</th>
-                              <th className="px-4 py-3">Supplier SKU</th>
+                              <th className="px-4 py-3">{t('entity.supplier')}</th>
+                              <th className="px-4 py-3">{t('suppliers.appliesTo')}</th>
+                              <th className="px-4 py-3">{t('suppliers.sku')}</th>
                               <th className="px-4 py-3 text-right">
-                                Last Cost
+                                {t('suppliers.lastCostShort')}
                               </th>
-                              <th className="px-4 py-3 text-right">Action</th>
+                              <th className="px-4 py-3 text-right">{t('products.actions')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border-subtle/60">
@@ -2831,7 +2861,7 @@ export default function ProductsPage({
                                           size={11}
                                           className="fill-emerald-500 text-emerald-500"
                                         />
-                                        Preferred
+                                        {t('suppliers.preferred')}
                                       </span>
                                     )}
                                   </div>
@@ -2847,7 +2877,7 @@ export default function ProductsPage({
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center rounded-md border border-border-subtle bg-muted-surface px-2 py-0.5 text-xs font-semibold text-text-secondary">
-                                      Base product
+                                      {t('suppliers.baseProduct')}
                                     </span>
                                   )}
                                 </td>
@@ -2875,7 +2905,7 @@ export default function ProductsPage({
                                     }
                                     className="h-8 px-3 text-xs"
                                   >
-                                    Edit
+                                    {t('common.edit')}
                                   </Button>
                                 </td>
                               </tr>
@@ -2890,24 +2920,24 @@ export default function ProductsPage({
                     <div className="mt-6 overflow-hidden rounded-lg border border-border-subtle bg-card shadow-2xs">
                       <div className="flex items-center justify-between border-b border-border-subtle bg-muted-surface px-4 py-3">
                         <h4 className="m-0 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                          Recent Received Costs
+                          {t('suppliers.recentCosts')}
                         </h4>
                         <span className="text-xs font-medium text-text-muted">
-                          Last 20 supplier receipts
+                          {t('suppliers.receiptHelp')}
                         </span>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                           <thead>
                             <tr className="border-b border-border-subtle bg-muted-surface text-[0.72rem] font-bold uppercase tracking-wider text-text-secondary select-none">
-                              <th className="px-4 py-2.5">Received</th>
-                              <th className="px-4 py-2.5">Supplier</th>
-                              <th className="px-4 py-2.5">Variant</th>
-                              <th className="px-4 py-2.5 text-right">Qty</th>
+                              <th className="px-4 py-2.5">{t('suppliers.received')}</th>
+                              <th className="px-4 py-2.5">{t('entity.supplier')}</th>
+                              <th className="px-4 py-2.5">{t('variants.variant')}</th>
+                              <th className="px-4 py-2.5 text-right">{t('suppliers.quantity')}</th>
                               <th className="px-4 py-2.5 text-right">
-                                Unit Cost
+                                {t('suppliers.unitCost')}
                               </th>
-                              <th className="px-4 py-2.5">Reference</th>
+                              <th className="px-4 py-2.5">{t('suppliers.reference')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border-subtle/60 text-xs">
@@ -2929,7 +2959,7 @@ export default function ProductsPage({
                                     item.variant.name
                                   ) : (
                                     <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100/80 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                      Base product
+                                      {t('suppliers.baseProduct')}
                                     </span>
                                   )}
                                 </td>
@@ -2959,11 +2989,10 @@ export default function ProductsPage({
                 <section className="rounded-lg border border-border-subtle bg-card shadow-sm">
                   <div className="border-b border-border-subtle px-4 py-6 sm:px-8">
                     <h3 className="text-base font-bold tracking-tight text-text-main">
-                      Product variants
+                      {t('variants.title')}
                     </h3>
                     <p className="mt-1 text-xs text-text-muted">
-                      Use variants when each size, color, or other choice has
-                      its own SKU, barcode, price, or stock level.
+                      {t('variants.description')}
                     </p>
                   </div>
 
@@ -2973,11 +3002,10 @@ export default function ProductsPage({
                         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle bg-muted-surface px-4 py-3">
                           <div>
                             <p className="m-0 text-sm font-bold text-text-main">
-                              Variants
+                              {t('products.variants')}
                             </p>
                             <p className="mt-1 text-xs text-text-muted">
-                              Edit selling price, cost, SKU, and barcode inline.
-                              A blank cost uses the product cost.
+                              {t('variants.help')}
                             </p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -3001,10 +3029,10 @@ export default function ProductsPage({
                               }}
                               variant="secondary"
                               size="sm"
-                              title="Auto-generate barcodes for all empty variant fields"
+                              title={t('variants.generateAll')}
                             >
                               <Sparkles size={14} className="text-brand" />
-                              Auto-generate barcodes
+                              {t('variants.generateBarcodes')}
                             </Button>
                             <Button
                               type="button"
@@ -3013,8 +3041,8 @@ export default function ProductsPage({
                               size="sm"
                             >
                               {savingExistingVariants
-                                ? 'Saving…'
-                                : 'Save variant changes'}
+                                ? t('variants.saving')
+                                : t('variants.saveChanges')}
                             </Button>
                           </div>
                         </div>
@@ -3023,13 +3051,13 @@ export default function ProductsPage({
                             <thead>
                               <tr>
                                 {[
-                                  'Variant',
+                                  t('variants.variant'),
                                   'SKU',
-                                  'Regular price ($)',
-                                  'Sale price ($)',
-                                  'Cost ($)',
-                                  'Barcode',
-                                  'Stock',
+                                  t('variants.regularPrice'),
+                                  t('variants.salePrice'),
+                                  t('variants.cost'),
+                                  t('products.barcode'),
+                                  t('variants.stock'),
                                   '',
                                 ].map((heading, index) => (
                                   <th
@@ -3076,7 +3104,7 @@ export default function ProductsPage({
                                           event.target.value.toUpperCase(),
                                         )
                                       }
-                                      aria-label={`${variant.name} SKU`}
+                                      aria-label={t('variants.skuNamed', { name: variant.name })}
                                       className="min-w-[140px] font-mono"
                                     />
                                   </td>
@@ -3103,7 +3131,7 @@ export default function ProductsPage({
                                             );
                                         }
                                       }}
-                                      aria-label={`${variant.name} regular price`}
+                                      aria-label={t('variants.regularPriceNamed', { name: variant.name })}
                                       type="number"
                                       min="0"
                                       step="0.01"
@@ -3134,8 +3162,8 @@ export default function ProductsPage({
                                             );
                                         }
                                       }}
-                                      aria-label={`${variant.name} sale price`}
-                                      placeholder="No sale"
+                                      aria-label={t('variants.salePriceNamed', { name: variant.name })}
+                                      placeholder={t('products.noSale')}
                                       type="number"
                                       min="0"
                                       step="0.01"
@@ -3166,8 +3194,8 @@ export default function ProductsPage({
                                             );
                                         }
                                       }}
-                                      aria-label={`${variant.name} cost`}
-                                      placeholder="Cost"
+                                      aria-label={t('variants.costNamed', { name: variant.name })}
+                                      placeholder={t('variants.costPlaceholder')}
                                       type="number"
                                       min="0"
                                       step="0.01"
@@ -3186,15 +3214,15 @@ export default function ProductsPage({
                                             event.target.value,
                                           )
                                         }
-                                        aria-label={`${variant.name} barcode`}
-                                        placeholder="Optional"
+                                        aria-label={t('variants.barcodeNamed', { name: variant.name })}
+                                        placeholder={t('common.optional')}
                                         className="min-w-[130px] font-mono"
                                       />
                                       <Button
                                         type="button"
                                         variant="secondary"
                                         size="sm"
-                                        title="Auto-generate barcode"
+                                        title={t('products.generateBarcode')}
                                         onClick={() => {
                                           const generated =
                                             '200' +
@@ -3220,8 +3248,8 @@ export default function ProductsPage({
                                   <td className="text-right">
                                     <Button
                                       type="button"
-                                      title={`Adjust stock for ${variant.name}`}
-                                      aria-label={`Adjust stock for ${variant.name}`}
+                                      title={t('variants.adjustNamed', { name: variant.name })}
+                                      aria-label={t('variants.adjustNamed', { name: variant.name })}
                                       onClick={() => {
                                         setStockAdjustmentVariant({
                                           id: variant.id,
@@ -3246,8 +3274,8 @@ export default function ProductsPage({
                                   <td className="text-right">
                                     <Button
                                       type="button"
-                                      title={`Delete variant ${variant.name}`}
-                                      aria-label={`Delete variant ${variant.name}`}
+                                      title={t('variants.deleteNamed', { name: variant.name })}
+                                      aria-label={t('variants.deleteNamed', { name: variant.name })}
                                       onClick={() =>
                                         setPendingExistingVariantDelete({
                                           id: variant.id,
@@ -3274,10 +3302,10 @@ export default function ProductsPage({
                         {variantOptions.length > 0 && (
                           <section className="rounded-lg border border-border-subtle bg-muted-surface p-5">
                             <p className="mb-3 text-sm font-bold text-text-main">
-                              Default values
+                              {t('variants.defaults')}
                             </p>
                             <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
-                              <FormField label="SKU prefix">
+                              <FormField label={t('variants.skuPrefix')}>
                                 <Input
                                   value={variantSkuPrefix}
                                   onChange={(e) =>
@@ -3285,12 +3313,12 @@ export default function ProductsPage({
                                       e.target.value.toUpperCase(),
                                     )
                                   }
-                                  placeholder="SHIRT"
+                                  placeholder={t('variants.skuPrefixPlaceholder')}
                                   className="font-mono"
                                 />
                               </FormField>
 
-                              <FormField label="Default price">
+                              <FormField label={t('variants.defaultPrice')}>
                                 <Input
                                   value={variantDefaultPrice}
                                   onChange={(e) =>
@@ -3307,19 +3335,19 @@ export default function ProductsPage({
                                   min="0"
                                   step="0.01"
                                   inputMode="decimal"
-                                  placeholder="0.00"
+                                  placeholder={t('products.zeroMoneyPlaceholder')}
                                   prefixText="$"
                                 />
                               </FormField>
 
-                              <FormField label="Default opening stock">
+                              <FormField label={t('variants.openingStock')}>
                                 <div className="flex h-10 overflow-hidden rounded-md border border-border-default bg-card shadow-2xs">
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
                                     className="h-full w-10 shrink-0 rounded-none border-r border-border-default p-0"
-                                    title="Decrease opening stock"
+                                    title={t('variants.decreaseOpening')}
                                     onClick={() => {
                                       const val =
                                         parseInt(variantDefaultStock, 10) || 0;
@@ -3359,7 +3387,7 @@ export default function ProductsPage({
                                       );
                                       setVariantDefaultStock(sanitized);
                                     }}
-                                    placeholder="0"
+                                    placeholder={t('products.zeroPlaceholder')}
                                     className="h-full min-w-0 rounded-none border-0 text-center font-mono shadow-none focus:ring-0"
                                   />
                                   <Button
@@ -3367,7 +3395,7 @@ export default function ProductsPage({
                                     variant="ghost"
                                     size="sm"
                                     className="h-full w-10 shrink-0 rounded-none border-l border-border-default p-0"
-                                    title="Increase opening stock"
+                                    title={t('variants.increaseOpening')}
                                     onClick={() => {
                                       const val =
                                         parseInt(variantDefaultStock, 10) || 0;
@@ -3382,8 +3410,7 @@ export default function ProductsPage({
                               </FormField>
                             </div>
                             <p className="mt-3 text-xs text-text-muted">
-                              Defaults fill new combinations automatically. Edit
-                              any row below for an exception.
+                              {t('variants.defaultsHelp')}
                             </p>
                           </section>
                         )}
@@ -3392,11 +3419,10 @@ export default function ProductsPage({
                           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                             <div>
                               <p className="m-0 text-sm font-bold text-text-main">
-                                Variant options
+                                {t('variants.options')}
                               </p>
                               <p className="mt-1 text-xs text-text-muted">
-                                Add values separated by commas. Combinations
-                                appear automatically.
+                                {t('variants.optionsHelp')}
                               </p>
                             </div>
                             {variantOptions.length < 3 && (
@@ -3407,7 +3433,9 @@ export default function ProductsPage({
                                     const next = [
                                       ...current,
                                       {
-                                        name: current.length ? 'Color' : 'Size',
+                                        name: current.length
+                                          ? t('variants.defaultColor')
+                                          : t('variants.defaultSize'),
                                         values: '',
                                       },
                                     ];
@@ -3420,8 +3448,8 @@ export default function ProductsPage({
                               >
                                 <Plus size={14} />{' '}
                                 {variantOptions.length
-                                  ? 'Add option'
-                                  : 'Add variants'}
+                                  ? t('variants.addOption')
+                                  : t('variants.addVariants')}
                               </Button>
                             )}
                           </div>
@@ -3440,8 +3468,8 @@ export default function ProductsPage({
                                       e.target.value,
                                     )
                                   }
-                                  placeholder="Option name"
-                                  aria-label={`Option ${index + 1} name`}
+                                  placeholder={t('variants.optionName')}
+                                  aria-label={t('variants.optionNameNumber', { number: index + 1 })}
                                   className="font-semibold"
                                 />
                                 <Input
@@ -3453,12 +3481,12 @@ export default function ProductsPage({
                                       e.target.value,
                                     )
                                   }
-                                  placeholder="e.g. Red, Blue, Black"
-                                  aria-label={`${option.name || 'Option'} values`}
+                                  placeholder={t('variants.valuesPlaceholder')}
+                                  aria-label={t('variants.valuesNamed', { name: option.name || t('variants.option') })}
                                 />
                                 <Button
                                   type="button"
-                                  aria-label={`Remove ${option.name || 'option'}`}
+                                  aria-label={t('variants.removeNamed', { name: option.name || t('variants.option').toLowerCase() })}
                                   onClick={() =>
                                     setVariantOptions((current) => {
                                       const next = current.filter(
@@ -3483,24 +3511,28 @@ export default function ProductsPage({
                           <div className="overflow-hidden rounded-lg border border-border-subtle bg-card">
                             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle bg-muted-surface px-4 py-3">
                               <span className="text-sm font-bold text-text-main">
-                                {variantDrafts.length} new variant
-                                {variantDrafts.length === 1 ? '' : 's'}
+                                {t(
+                                  variantDrafts.length === 1
+                                    ? 'variants.newCount'
+                                    : 'variants.newCountPlural',
+                                  { count: variantDrafts.length },
+                                )}
                               </span>
                               <Input
                                 value={variantSearch}
                                 onChange={(e) =>
                                   setVariantSearch(e.target.value)
                                 }
-                                placeholder="Search variants"
+                                placeholder={t('variants.search')}
                                 className="w-[180px]"
                               />
                             </div>
                             {selectedVariantDrafts.length > 0 && (
                               <div className="flex flex-wrap items-end gap-3 border-b border-brand-border bg-brand-subtle px-4 py-3">
                                 <span className="mr-1 text-xs font-bold text-brand">
-                                  {selectedVariantDrafts.length} selected
+                                  {t('variants.selectedCount', { count: selectedVariantDrafts.length })}
                                 </span>
-                                <FormField label="Set price">
+                                <FormField label={t('variants.setPrice')}>
                                   <Input
                                     value={bulkVariantPrice}
                                     onChange={(e) =>
@@ -3513,7 +3545,7 @@ export default function ProductsPage({
                                     className="w-[100px]"
                                   />
                                 </FormField>
-                                <FormField label="Set opening stock">
+                                <FormField label={t('variants.setStock')}>
                                   <Input
                                     value={bulkVariantStock}
                                     onChange={(e) =>
@@ -3530,7 +3562,7 @@ export default function ProductsPage({
                                   onClick={applyBulkVariantValues}
                                   size="sm"
                                 >
-                                  Apply
+                                  {t('variants.apply')}
                                 </Button>
                                 <Button
                                   type="button"
@@ -3538,7 +3570,7 @@ export default function ProductsPage({
                                   variant="secondary"
                                   size="sm"
                                 >
-                                  Clear
+                                  {t('common.clear')}
                                 </Button>
                               </div>
                             )}
@@ -3550,7 +3582,7 @@ export default function ProductsPage({
                                       <input
                                         type="checkbox"
                                         className="size-4 rounded border-border-default text-brand focus:ring-brand/10"
-                                        aria-label="Select all visible variants"
+                                        aria-label={t('variants.selectAll')}
                                         checked={
                                           visibleVariantDrafts.length > 0 &&
                                           visibleVariantDrafts.every((draft) =>
@@ -3582,11 +3614,11 @@ export default function ProductsPage({
                                       />
                                     </th>
                                     {[
-                                      'Variant',
+                                      t('variants.variant'),
                                       'SKU',
-                                      'Price ($)',
-                                      'Opening stock',
-                                      'Barcode',
+                                      t('variants.price'),
+                                      t('variants.openingStockShort'),
+                                      t('products.barcode'),
                                     ].map((heading) => (
                                       <th key={heading}>{heading}</th>
                                     ))}
@@ -3603,7 +3635,7 @@ export default function ProductsPage({
                                           <input
                                             type="checkbox"
                                             className="size-4 rounded border-border-default text-brand focus:ring-brand/10"
-                                            aria-label={`Select ${draft.name}`}
+                                            aria-label={t('variants.selectNamed', { name: draft.name })}
                                             checked={selectedVariantDrafts.includes(
                                               draft.key,
                                             )}
@@ -3666,7 +3698,7 @@ export default function ProductsPage({
                                                   type="button"
                                                   variant="secondary"
                                                   size="sm"
-                                                  title="Auto-generate barcode"
+                                                  title={t('products.generateBarcode')}
                                                   onClick={() => {
                                                     const generated =
                                                       '200' +
@@ -3705,11 +3737,10 @@ export default function ProductsPage({
                           <section className="rounded-lg border border-border-subtle bg-muted-surface p-5">
                             <div className="mb-4">
                               <p className="m-0 text-sm font-bold text-text-main">
-                                Images by variant value
+                                {t('variants.imagesTitle')}
                               </p>
                               <p className="mt-1 text-xs text-text-muted">
-                                Upload an image once for a value, such as Red.
-                                Every Red variant can use this gallery.
+                                {t('variants.imagesHelp')}
                               </p>
                             </div>
                             <div className="flex flex-col gap-4">
@@ -3747,12 +3778,12 @@ export default function ProductsPage({
                                                 if (event.key === 'Escape')
                                                   setEditingVariantValue(null);
                                               }}
-                                              aria-label={`Rename ${value.name}`}
+                                              aria-label={t('variants.renameNamed', { name: value.name })}
                                               className="h-8 min-w-0 flex-1 px-2 text-xs font-bold"
                                             />
                                             <Button
                                               type="button"
-                                              aria-label="Save value name"
+                                              aria-label={t('variants.saveValueName')}
                                               onClick={() =>
                                                 void saveVariantValueName()
                                               }
@@ -3769,7 +3800,7 @@ export default function ProductsPage({
                                             </p>
                                             <Button
                                               type="button"
-                                              aria-label={`Rename ${value.name}`}
+                                              aria-label={t('variants.renameNamed', { name: value.name })}
                                               onClick={() =>
                                                 setEditingVariantValue({
                                                   id: value.id,
@@ -3784,7 +3815,7 @@ export default function ProductsPage({
                                             </Button>
                                             <Button
                                               type="button"
-                                              aria-label={`Delete ${value.name}`}
+                                              aria-label={t('products.deleteNamed', { name: value.name })}
                                               onClick={() =>
                                                 setPendingVariantValueDelete({
                                                   id: value.id,
@@ -3808,12 +3839,12 @@ export default function ProductsPage({
                                             >
                                               <img
                                                 src={image.imageUrl}
-                                                alt={`${value.name} variant`}
+                                                alt={t('variants.imageAlt', { name: value.name })}
                                                 className="size-[42px] rounded-md border border-border-subtle object-cover"
                                               />
                                               <Button
                                                 type="button"
-                                                aria-label={`Remove ${value.name} image`}
+                                                aria-label={t('variants.removeImageNamed', { name: value.name })}
                                                 onClick={() =>
                                                   void removeVariantValueImage(
                                                     value.id,
@@ -3832,8 +3863,8 @@ export default function ProductsPage({
                                         <label className="mt-2 inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-border-default bg-card px-3 text-xs font-bold text-text-main shadow-sm transition hover:bg-muted-surface">
                                           <ImageIcon size={13} />{' '}
                                           {uploadingVariantValueId === value.id
-                                            ? 'Uploading…'
-                                            : 'Add image'}
+                                            ? t('products.uploading')
+                                            : t('variants.addImage')}
                                           <input
                                             type="file"
                                             accept="image/*"
@@ -3865,53 +3896,53 @@ export default function ProductsPage({
                   {editingVariant && (
                     <section className="mt-4 rounded-lg border border-border-subtle bg-muted-surface p-5">
                       <h4 className="mb-4 text-sm font-bold text-text-main">
-                        Edit Variant — {editingVariant.product.name}
+                        {t('variants.editTitle', { name: editingVariant.product.name })}
                       </h4>
                       <form
                         onSubmit={saveVariant}
                         className="flex flex-col gap-4"
                       >
                         <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-                          <FormField label="Variant name" required>
+                          <FormField label={t('variants.name')} required>
                             <Input
                               required
                               value={variantName}
                               onChange={(e) => setVariantName(e.target.value)}
-                              placeholder="Variant name"
+                              placeholder={t('variants.name')}
                             />
                           </FormField>
-                          <FormField label="Variant SKU" required>
+                          <FormField label={t('variants.sku')} required>
                             <Input
                               required
                               value={variantSku}
                               onChange={(e) => setVariantSku(e.target.value)}
-                              placeholder="Variant SKU"
+                              placeholder={t('variants.sku')}
                             />
                           </FormField>
-                          <FormField label="Barcode">
+                          <FormField label={t('products.barcode')}>
                             <Input
                               value={variantBarcode}
                               onChange={(e) =>
                                 setVariantBarcode(e.target.value)
                               }
-                              placeholder="Barcode"
+                              placeholder={t('products.barcode')}
                             />
                           </FormField>
-                          <FormField label="Price">
+                          <FormField label={t('products.price')}>
                             <Input
                               value={variantPrice}
                               onChange={(e) => setVariantPrice(e.target.value)}
                               type="number"
                               min="0"
                               step="0.01"
-                              placeholder="Price"
+                              placeholder={t('products.price')}
                               prefixText="$"
                             />
                           </FormField>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Button type="submit" size="sm">
-                            Save Variant
+                            {t('variants.save')}
                           </Button>
                           <Button
                             type="button"
@@ -3919,7 +3950,7 @@ export default function ProductsPage({
                             variant="secondary"
                             size="sm"
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                         </div>
                       </form>
@@ -3948,7 +3979,7 @@ export default function ProductsPage({
                           color: '#0f172a',
                         }}
                       >
-                        Reusable Option Sets
+                        {t('optionSets.title')}
                       </h3>
                       <p
                         style={{
@@ -3957,8 +3988,7 @@ export default function ProductsPage({
                           color: '#64748b',
                         }}
                       >
-                        Create a set once (e.g. Drink Sizes S, M, L) then apply
-                        it to any product.
+                        {t('optionSets.description')}
                       </p>
 
                       <form
@@ -3986,7 +4016,7 @@ export default function ProductsPage({
                                 marginBottom: 4,
                               }}
                             >
-                              Template
+                              {t('optionSets.template')}
                             </label>
                             <select
                               value={preset}
@@ -4000,22 +4030,22 @@ export default function ProductsPage({
                               }}
                             >
                               <option value="DRINK_SIZES">
-                                Drink sizes — S, M, L
+                                {t('optionSets.drinkSizes')}
                               </option>
                               <option value="SHOE_SIZES">
-                                Shoe sizes — 34 to 45
+                                {t('optionSets.shoeSizes')}
                               </option>
                               <option value="CLOTHING_SIZES">
-                                Clothing sizes — XS to 2XL
+                                {t('optionSets.clothingSizes')}
                               </option>
                               <option value="SUGAR_LEVEL">
-                                Sugar level — 0% to 100%
+                                {t('optionSets.sugarLevelRange')}
                               </option>
                               <option value="TEMPERATURE">
-                                Temperature — Hot, Iced
+                                {t('optionSets.temperatureChoices')}
                               </option>
-                              <option value="ADD_ONS">Add-ons</option>
-                              <option value="CUSTOM">Custom set</option>
+                              <option value="ADD_ONS">{t('optionSets.addOns')}</option>
+                              <option value="CUSTOM">{t('optionSets.customSet')}</option>
                             </select>
                           </div>
                           {preset === 'CUSTOM' && (
@@ -4029,12 +4059,12 @@ export default function ProductsPage({
                                   marginBottom: 4,
                                 }}
                               >
-                                Set Name
+                                {t('optionSets.setName')}
                               </label>
                               <input
                                 required
                                 name="name"
-                                placeholder="Bread size"
+                                placeholder={t('optionSets.setNamePlaceholder')}
                                 style={{
                                   width: '100%',
                                   padding: '8px 12px',
@@ -4056,12 +4086,12 @@ export default function ProductsPage({
                                   marginBottom: 4,
                                 }}
                               >
-                                Option Names (comma separated)
+                                {t('optionSets.optionNames')}
                               </label>
                               <input
                                 required
                                 name="optionNames"
-                                placeholder="Small, Medium, Large"
+                                placeholder={t('optionSets.optionNamesPlaceholder')}
                                 style={{
                                   width: '100%',
                                   padding: '8px 12px',
@@ -4082,7 +4112,7 @@ export default function ProductsPage({
                                 marginBottom: 4,
                               }}
                             >
-                              Min Choices
+                              {t('optionSets.minChoices')}
                             </label>
                             <input
                               name="minSelections"
@@ -4108,7 +4138,7 @@ export default function ProductsPage({
                                 marginBottom: 4,
                               }}
                             >
-                              Max Choices
+                              {t('optionSets.maxChoices')}
                             </label>
                             <input
                               name="maxSelections"
@@ -4139,7 +4169,7 @@ export default function ProductsPage({
                               cursor: 'pointer',
                             }}
                           >
-                            Create Option Set
+                            {t('optionSets.create')}
                           </button>
                         </div>
                       </form>
@@ -4162,7 +4192,7 @@ export default function ProductsPage({
                               textTransform: 'uppercase',
                             }}
                           >
-                            Existing Option Sets
+                            {t('optionSets.existing')}
                           </p>
                           {optionSets.map((s) => (
                             <div
@@ -4192,7 +4222,10 @@ export default function ProductsPage({
                                   fontSize: '0.75rem',
                                 }}
                               >
-                                ({s.minSelections}–{s.maxSelections} choices)
+                                {t('optionSets.choiceRange', {
+                                  min: s.minSelections,
+                                  max: s.maxSelections,
+                                })}
                               </span>
                             </div>
                           ))}
@@ -4218,7 +4251,7 @@ export default function ProductsPage({
                           color: '#0f172a',
                         }}
                       >
-                        Apply Option Set to Product
+                        {t('optionSets.applyTitle')}
                       </h3>
                       <p
                         style={{
@@ -4227,7 +4260,7 @@ export default function ProductsPage({
                           color: '#64748b',
                         }}
                       >
-                        Attach a created option set to a specific product.
+                        {t('optionSets.applyDescription')}
                       </p>
                       <form
                         onSubmit={applyOptionSet}
@@ -4245,7 +4278,7 @@ export default function ProductsPage({
                             fontSize: '0.85rem',
                           }}
                         >
-                          <option value="">Select product</option>
+                          <option value="">{t('optionSets.selectProduct')}</option>
                           {products.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
@@ -4264,7 +4297,7 @@ export default function ProductsPage({
                             fontSize: '0.85rem',
                           }}
                         >
-                          <option value="">Select option set</option>
+                          <option value="">{t('optionSets.selectSet')}</option>
                           {optionSets.map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.name} (
@@ -4285,7 +4318,7 @@ export default function ProductsPage({
                             cursor: 'pointer',
                           }}
                         >
-                          Apply
+                          {t('variants.apply')}
                         </button>
                       </form>
                     </div>
@@ -4308,7 +4341,7 @@ export default function ProductsPage({
                           color: '#0f172a',
                         }}
                       >
-                        Set Option Extra Prices
+                        {t('optionSets.pricesTitle')}
                       </h3>
                       <p
                         style={{
@@ -4317,8 +4350,7 @@ export default function ProductsPage({
                           color: '#64748b',
                         }}
                       >
-                        Set price adjustments for each option choice (e.g. Large
-                        +$0.50).
+                        {t('optionSets.pricesDescription')}
                       </p>
                       <select
                         value={pricedProductId}
@@ -4332,7 +4364,7 @@ export default function ProductsPage({
                           marginBottom: 16,
                         }}
                       >
-                        <option value="">Select product with modifiers</option>
+                        <option value="">{t('optionSets.selectProductWithModifiers')}</option>
                         {products
                           .filter((p) => p.modifierGroups.length > 0)
                           .map((p) => (
@@ -4389,7 +4421,7 @@ export default function ProductsPage({
                                         marginBottom: 4,
                                       }}
                                     >
-                                      {opt.name} extra price ($)
+                                      {t('optionSets.extraPriceNamed', { name: opt.name })}
                                     </label>
                                     <input
                                       type="number"
@@ -4429,7 +4461,7 @@ export default function ProductsPage({
                                 cursor: 'pointer',
                               }}
                             >
-                              Save Option Prices
+                              {t('optionSets.savePrices')}
                             </button>
                           </div>
                         </form>
@@ -4454,7 +4486,7 @@ export default function ProductsPage({
                           color: '#0f172a',
                         }}
                       >
-                        Custom One-off Option
+                        {t('optionSets.customTitle')}
                       </h3>
                       <p
                         style={{
@@ -4463,7 +4495,7 @@ export default function ProductsPage({
                           color: '#64748b',
                         }}
                       >
-                        Add an unusual option specific to a single product.
+                        {t('optionSets.customDescription')}
                       </p>
                       <form
                         onSubmit={addModifier}
@@ -4490,7 +4522,7 @@ export default function ProductsPage({
                                 marginBottom: 4,
                               }}
                             >
-                              Product
+                              {t('entity.product')}
                             </label>
                             <select
                               required
@@ -4503,7 +4535,7 @@ export default function ProductsPage({
                                 fontSize: '0.85rem',
                               }}
                             >
-                              <option value="">Select product</option>
+                              <option value="">{t('optionSets.selectProduct')}</option>
                               {products.map((p) => (
                                 <option key={p.id} value={p.id}>
                                   {p.name}
@@ -4521,7 +4553,7 @@ export default function ProductsPage({
                                 marginBottom: 4,
                               }}
                             >
-                              Modifier Type
+                              {t('optionSets.modifierType')}
                             </label>
                             <select
                               value={modifierGroup}
@@ -4534,11 +4566,11 @@ export default function ProductsPage({
                                 fontSize: '0.85rem',
                               }}
                             >
-                              <option>Size</option>
-                              <option>Sugar level</option>
-                              <option>Temperature</option>
-                              <option>Add-ons</option>
-                              <option value="OTHER">Other</option>
+                              <option value="Size">{t('optionSets.size')}</option>
+                              <option value="Sugar level">{t('optionSets.sugarLevel')}</option>
+                              <option value="Temperature">{t('optionSets.temperature')}</option>
+                              <option value="Add-ons">{t('optionSets.addOns')}</option>
+                              <option value="OTHER">{t('optionSets.other')}</option>
                             </select>
                           </div>
                           {modifierGroup === 'OTHER' && (
@@ -4552,12 +4584,12 @@ export default function ProductsPage({
                                   marginBottom: 4,
                                 }}
                               >
-                                Custom Group Name
+                                {t('optionSets.customGroupName')}
                               </label>
                               <input
                                 required
                                 name="customGroupName"
-                                placeholder="Milk"
+                                placeholder={t('optionSets.customGroupPlaceholder')}
                                 style={{
                                   width: '100%',
                                   padding: '8px 12px',
@@ -4578,12 +4610,12 @@ export default function ProductsPage({
                                 marginBottom: 4,
                               }}
                             >
-                              Option Name
+                              {t('optionSets.optionName')}
                             </label>
                             <input
                               required
                               name="optionName"
-                              placeholder="Large"
+                              placeholder={t('optionSets.optionNamePlaceholder')}
                               style={{
                                 width: '100%',
                                 padding: '8px 12px',
@@ -4603,7 +4635,7 @@ export default function ProductsPage({
                                 marginBottom: 4,
                               }}
                             >
-                              Price Change ($)
+                              {t('optionSets.priceChange')}
                             </label>
                             <input
                               name="priceAdjustment"
@@ -4634,7 +4666,7 @@ export default function ProductsPage({
                               cursor: 'pointer',
                             }}
                           >
-                            Add Custom Option
+                            {t('optionSets.addCustom')}
                           </button>
                         </div>
                       </form>
@@ -4658,10 +4690,10 @@ export default function ProductsPage({
                 </div>
                 <div>
                   <h2 className="mb-1 text-base font-bold tracking-tight text-text-main">
-                    Product Categories
+                    {t('categories.title')}
                   </h2>
                   <p className="m-0 max-w-2xl text-xs leading-relaxed text-text-muted">
-                    Organize and reorder products for faster checkout.
+                    {t('categories.description')}
                   </p>
                 </div>
               </div>
@@ -4672,7 +4704,7 @@ export default function ProductsPage({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <FormField
                     id="new-category-name"
-                    label="Create a category"
+                    label={t('categories.create')}
                     required
                     className="min-w-0 flex-1"
                   >
@@ -4680,13 +4712,13 @@ export default function ProductsPage({
                       id="new-category-name"
                       required
                       name="name"
-                      placeholder="e.g. Coffee, Bakery, Shoes"
+                      placeholder={t('categories.placeholder')}
                       className="w-full"
                     />
                   </FormField>
                   <Button type="submit" className="w-full shrink-0 sm:w-auto">
                     <Plus size={16} />
-                    Add Category
+                    {t('categories.add')}
                   </Button>
                 </div>
               </form>
@@ -4696,17 +4728,24 @@ export default function ProductsPage({
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="mb-1 text-xs font-bold uppercase tracking-wider text-teal-700">
-                    Your categories
+                    {t('categories.yours')}
                   </h3>
                   <p className="m-0 text-sm text-text-muted">
                     {categories.length === 0
-                      ? 'Create your first category to organize the catalog.'
-                      : `${categories.length} ${categories.length === 1 ? 'category' : 'categories'} in your catalog`}
+                      ? t('categories.firstHelp')
+                      : t(
+                          categories.length === 1
+                            ? 'categories.catalogCount'
+                            : 'categories.catalogCountPlural',
+                          { count: categories.length },
+                        )}
                   </p>
                 </div>
                 {categories.length > 0 && (
                   <span className="rounded-full bg-brand-subtle px-3 py-1 text-xs font-bold text-brand ring-1 ring-inset ring-brand-border">
-                    {categoryProductTotal} products assigned
+                    {t('categories.assigned', {
+                      count: categoryProductTotal,
+                    })}
                   </span>
                 )}
               </div>
@@ -4715,10 +4754,10 @@ export default function ProductsPage({
                 <div className="rounded-lg border border-dashed border-border-default bg-muted-surface px-5 py-10 text-center">
                   <Tag className="mx-auto mb-3 text-text-subtle" size={24} />
                   <p className="m-0 text-sm font-semibold text-text-secondary">
-                    No categories yet
+                    {t('categories.empty')}
                   </p>
                   <p className="mt-1 text-sm text-text-muted">
-                    Use the form above to add the first one.
+                    {t('categories.emptyHelp')}
                   </p>
                 </div>
               ) : (
@@ -4734,7 +4773,7 @@ export default function ProductsPage({
                         onDragStart={(e) => handleCategoryDragStart(e, index)}
                         onDragOver={(e) => handleCategoryDragOver(e, index)}
                         onDragEnd={handleCategoryDragEnd}
-                        title="Drag to reorder category"
+                        title={t('categories.drag')}
                         className={`group flex min-h-14 items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm transition duration-150 ${
                           isDragging
                             ? 'scale-[0.98] border-dashed border-brand bg-brand-subtle opacity-60'
@@ -4747,7 +4786,7 @@ export default function ProductsPage({
                             className="m-0 flex w-full items-center gap-2"
                           >
                             <Input
-                              aria-label="Category name"
+                              aria-label={t('categories.name')}
                               value={categoryName}
                               onChange={(event) =>
                                 setCategoryName(event.target.value)
@@ -4756,7 +4795,7 @@ export default function ProductsPage({
                               autoFocus
                             />
                             <Button type="submit" size="sm">
-                              Save
+                              {t('common.save')}
                             </Button>
                             <Button
                               type="button"
@@ -4764,7 +4803,7 @@ export default function ProductsPage({
                               size="sm"
                               onClick={() => setEditingCategory(null)}
                             >
-                              Cancel
+                              {t('common.cancel')}
                             </Button>
                           </form>
                         ) : (
@@ -4785,15 +4824,19 @@ export default function ProductsPage({
 
                             <div className="flex shrink-0 items-center gap-1.5">
                               <span className="rounded-full border border-border-subtle bg-muted-surface px-2 py-0.5 text-xs font-semibold text-text-secondary">
-                                {productCount}{' '}
-                                {productCount === 1 ? 'product' : 'products'}
+                                {t(
+                                  productCount === 1
+                                    ? 'categories.productCount'
+                                    : 'categories.productCountPlural',
+                                  { count: productCount },
+                                )}
                               </span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="bareIcon"
-                                title={`Edit ${c.name}`}
-                                aria-label={`Edit ${c.name}`}
+                                title={t('products.editNamed', { name: c.name })}
+                                aria-label={t('products.editNamed', { name: c.name })}
                                 onClick={() => startCategoryEdit(c)}
                                 className="size-7 border-0 bg-transparent p-0 text-text-muted shadow-none hover:bg-transparent hover:text-text-main"
                               >
@@ -4805,10 +4848,10 @@ export default function ProductsPage({
                                 size="bareIcon"
                                 title={
                                   productCount
-                                    ? 'Move or remove products before deleting this category'
-                                    : `Delete ${c.name}`
+                                    ? t('categories.removeProducts')
+                                    : t('products.deleteNamed', { name: c.name })
                                 }
-                                aria-label={`Delete ${c.name}`}
+                                aria-label={t('products.deleteNamed', { name: c.name })}
                                 disabled={productCount > 0}
                                 onClick={() => setPendingCategoryDelete(c)}
                                 className="size-7 border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
@@ -4839,10 +4882,10 @@ export default function ProductsPage({
                 </div>
                 <div>
                   <h2 className="mb-1 text-base font-bold tracking-tight text-text-main">
-                    Import products from CSV
+                    {t('csv.title')}
                   </h2>
                   <p className="m-0 text-xs leading-relaxed text-text-muted">
-                    Add multiple products from a CSV export.
+                    {t('csv.description')}
                   </p>
                 </div>
               </div>
@@ -4851,7 +4894,7 @@ export default function ProductsPage({
             <div className="space-y-5 px-4 py-6 sm:px-8">
               <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
                 <span className="font-semibold text-text-secondary">
-                  Required:
+                  {t('csv.required')}
                 </span>
                 {['name', 'sku', 'price'].map((column) => (
                   <code
@@ -4862,7 +4905,7 @@ export default function ProductsPage({
                   </code>
                 ))}
                 <span className="ml-1">
-                  Optional: barcode, stock, reorder level, category
+                  {t('csv.optional')}
                 </span>
               </div>
 
@@ -4873,10 +4916,10 @@ export default function ProductsPage({
                   strokeWidth={1.5}
                 />
                 <p className="m-0 text-sm font-bold text-text-main">
-                  Choose a CSV file to upload
+                  {t('csv.chooseFile')}
                 </p>
                 <p className="mt-1 text-xs text-text-muted">
-                  Supports standard UTF-8 CSV exports
+                  {t('csv.utf8')}
                 </p>
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -4887,11 +4930,11 @@ export default function ProductsPage({
                     onClick={downloadTemplate}
                   >
                     <Download size={15} />
-                    Download template
+                    {t('csv.downloadTemplate')}
                   </Button>
                   <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-brand bg-brand px-3 text-[0.8rem] font-bold text-white shadow-sm transition hover:bg-brand-hover focus-within:ring-2 focus-within:ring-brand/10">
                     <Upload size={15} />
-                    Choose CSV
+                    {t('csv.choose')}
                     <input
                       type="file"
                       accept=".csv,text/csv"
@@ -4906,7 +4949,7 @@ export default function ProductsPage({
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-brand-border bg-brand-subtle px-4 py-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-text-secondary">
                     <CheckCircle2 size={17} className="text-brand" />
-                    CSV file loaded and ready to validate.
+                    {t('csv.loaded')}
                   </div>
                   <div className="ml-auto flex flex-wrap gap-2">
                     <Button
@@ -4915,7 +4958,7 @@ export default function ProductsPage({
                       size="sm"
                       onClick={() => void previewCsv()}
                     >
-                      Preview CSV
+                      {t('csv.preview')}
                     </Button>
                     {importPreview?.valid && (
                       <Button
@@ -4923,7 +4966,7 @@ export default function ProductsPage({
                         size="sm"
                         onClick={() => void importCsv()}
                       >
-                        Import {importPreview.totalRows} Products
+                        {t('csv.import', { count: importPreview.totalRows })}
                       </Button>
                     )}
                   </div>
@@ -4934,18 +4977,23 @@ export default function ProductsPage({
                 <div className="max-w-3xl overflow-hidden rounded-lg border border-border-subtle">
                   {importPreview.errors.length > 0 ? (
                     <div className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                      <p className="mb-1.5 font-bold">Validation errors</p>
+                      <p className="mb-1.5 font-bold">
+                        {t('csv.validationErrors')}
+                      </p>
                       <ul className="list-disc space-y-0.5 pl-4">
                         {importPreview.errors.map((err) => (
                           <li key={`${err.row}-${err.message}`}>
-                            Row {err.row}: {err.message}
+                            {t('csv.rowError', {
+                              row: err.row,
+                              message: err.message,
+                            })}
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : (
                     <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                      CSV file is valid and ready to import.
+                      {t('csv.valid')}
                     </div>
                   )}
 
@@ -4954,10 +5002,10 @@ export default function ProductsPage({
                       <table className="w-full min-w-[520px] border-collapse text-left text-sm">
                         <thead className="border-b border-border-subtle bg-muted-surface text-xs font-bold uppercase tracking-wide text-text-secondary">
                           <tr>
-                            <th className="px-4 py-3">Name</th>
+                            <th className="px-4 py-3">{t('csv.name')}</th>
                             <th className="px-4 py-3">SKU</th>
-                            <th className="px-4 py-3">Price</th>
-                            <th className="px-4 py-3">Stock</th>
+                            <th className="px-4 py-3">{t('products.price')}</th>
+                            <th className="px-4 py-3">{t('csv.stock')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -4992,8 +5040,8 @@ export default function ProductsPage({
 
         {pendingCategoryDelete && (
           <Modal
-            title="Delete category?"
-            description="Only empty categories can be deleted."
+            title={t('categories.deleteTitle')}
+            description={t('categories.deleteHelp')}
             icon={<Trash2 size={20} />}
             size="sm"
             density="compact"
@@ -5008,7 +5056,7 @@ export default function ProductsPage({
                   disabled={deletingCategory}
                   onClick={() => setPendingCategoryDelete(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   variant="danger"
@@ -5017,25 +5065,25 @@ export default function ProductsPage({
                   onClick={() => void deleteCategory(pendingCategoryDelete)}
                 >
                   <Trash2 size={14} />
-                  {deletingCategory ? 'Deleting…' : 'Delete category'}
+                  {deletingCategory
+                    ? t('common.deleting')
+                    : t('dialogs.deleteCategory')}
                 </Button>
               </>
             }
           >
             <p className="text-sm leading-5 text-text-muted">
-              Permanently delete{' '}
-              <strong className="font-semibold text-text-main">
-                {pendingCategoryDelete.name}
-              </strong>
-              ?
+              {t('dialogs.permanentlyDeleteNamed', {
+                name: pendingCategoryDelete.name,
+              })}
             </p>
           </Modal>
         )}
 
         {pendingDelete && (
           <Modal
-            title="Delete product"
-            description="This action is permanent."
+            title={t('products.deleteProduct')}
+            description={t('common.permanent')}
             icon={<Trash2 size={20} />}
             size="sm"
             density="compact"
@@ -5049,7 +5097,7 @@ export default function ProductsPage({
                   onClick={() => setPendingDelete(null)}
                   className="max-sm:w-full"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   variant="dangerSubtle"
@@ -5059,24 +5107,21 @@ export default function ProductsPage({
                   className="max-sm:w-full"
                 >
                   <Trash2 size={14} />
-                  {deletingProduct ? 'Deleting…' : 'Delete product'}
+                  {deletingProduct
+                    ? t('common.deleting')
+                    : t('products.deleteProduct')}
                 </Button>
               </>
             }
           >
             <div className="grid gap-4">
               <p className="text-sm leading-5 text-text-muted">
-                Are you sure you want to permanently delete{' '}
-                <strong className="font-semibold text-text-main">
-                  {pendingDelete.name}
-                </strong>
-                ?
+                {t('dialogs.confirmDeleteNamed', { name: pendingDelete.name })}
               </p>
               <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm leading-5 text-amber-800">
                 <AlertCircle size={17} className="mt-0.5 shrink-0" />
                 <p>
-                  This is only allowed when the product has no sales or stock
-                  history.
+                  {t('dialogs.productDeleteRestriction')}
                 </p>
               </div>
             </div>
@@ -5085,8 +5130,10 @@ export default function ProductsPage({
 
         {pendingVariantValueDelete && (
           <Modal
-            title={`Delete ${pendingVariantValueDelete.optionName} value?`}
-            description="This cannot be undone."
+            title={t('dialogs.deleteOptionValueTitle', {
+              name: pendingVariantValueDelete.optionName,
+            })}
+            description={t('common.cannotUndo')}
             icon={<Trash2 size={20} />}
             size="sm"
             density="compact"
@@ -5102,7 +5149,7 @@ export default function ProductsPage({
                   disabled={deletingVariantValue}
                   onClick={() => setPendingVariantValueDelete(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -5112,23 +5159,23 @@ export default function ProductsPage({
                   onClick={() => void deleteVariantValue()}
                 >
                   <Trash2 size={15} />{' '}
-                  {deletingVariantValue ? 'Deleting…' : 'Delete value'}
+                  {deletingVariantValue
+                    ? t('common.deleting')
+                    : t('dialogs.deleteValue')}
                 </Button>
               </>
             }
           >
             <div className="grid gap-4">
               <p className="text-sm leading-5 text-text-muted">
-                Delete{' '}
-                <strong className="font-semibold text-text-main">
-                  {pendingVariantValueDelete.name}
-                </strong>{' '}
-                and every variant that uses it.
+                {t('dialogs.deleteValueNamed', {
+                  name: pendingVariantValueDelete.name,
+                })}
               </p>
               <div className="flex gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-800">
                 <AlertCircle size={17} className="mt-0.5 shrink-0" />
                 <span>
-                  Values used by sales or stock history cannot be deleted.
+                  {t('dialogs.valueDeleteRestriction')}
                 </span>
               </div>
             </div>
@@ -5137,8 +5184,11 @@ export default function ProductsPage({
 
         {stockAdjustmentVariant && (
           <Modal
-            title="Adjust stock"
-            description={`${stockAdjustmentVariant.name} · Current stock: ${stockAdjustmentVariant.stock}`}
+            title={t('stock.adjust')}
+            description={t('dialogs.currentStock', {
+              name: stockAdjustmentVariant.name,
+              stock: stockAdjustmentVariant.stock,
+            })}
             icon={<Sliders size={20} />}
             size="sm"
             density="compact"
@@ -5154,7 +5204,7 @@ export default function ProductsPage({
                   disabled={savingStockAdjustment}
                   onClick={() => setStockAdjustmentVariant(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -5162,21 +5212,23 @@ export default function ProductsPage({
                   disabled={savingStockAdjustment}
                   onClick={() => void saveStockAdjustment()}
                 >
-                  {savingStockAdjustment ? 'Saving…' : 'Save adjustment'}
+                  {savingStockAdjustment
+                    ? t('common.saving')
+                    : t('stock.saveAdjustment')}
                 </Button>
               </>
             }
           >
             <div className="grid gap-4">
-                <FormField label="Quantity change">
+                <FormField label={t('stock.quantityChange')}>
                   <div className="flex h-10 overflow-hidden rounded-md border border-border-default bg-card shadow-2xs">
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       className="h-full w-10 shrink-0 rounded-none border-r border-border-default p-0"
-                      title="Decrease quantity"
-                      aria-label="Decrease quantity"
+                      title={t('stock.decrease')}
+                      aria-label={t('stock.decrease')}
                       onClick={() => {
                         const current = parseInt(
                           stockAdjustmentQuantity || '0',
@@ -5221,7 +5273,7 @@ export default function ProductsPage({
                           setStockAdjustmentQuantity(val);
                         }
                       }}
-                      placeholder="e.g. 10 or -2"
+                      placeholder={t('dialogs.quantityPlaceholder')}
                       className="h-full min-w-0 rounded-none border-0 text-center font-mono shadow-none focus:ring-0"
                     />
                     <Button
@@ -5229,8 +5281,8 @@ export default function ProductsPage({
                       variant="ghost"
                       size="sm"
                       className="h-full w-10 shrink-0 rounded-none border-l border-border-default p-0"
-                      title="Increase quantity"
-                      aria-label="Increase quantity"
+                      title={t('stock.increase')}
+                      aria-label={t('stock.increase')}
                       onClick={() => {
                         const current = parseInt(
                           stockAdjustmentQuantity || '0',
@@ -5244,22 +5296,22 @@ export default function ProductsPage({
                     </Button>
                   </div>
                 </FormField>
-                <FormField label="Reason">
+                <FormField label={t('stock.reason')}>
                   <CustomSelect
                     value={stockAdjustmentReason}
                     onChange={setStockAdjustmentReason}
                     options={[
-                      { value: 'RECEIVED', label: 'Received stock' },
-                      { value: 'OPENING_STOCK', label: 'Opening stock' },
-                      { value: 'DAMAGED', label: 'Damaged' },
-                      { value: 'EXPIRED', label: 'Expired' },
-                      { value: 'CORRECTION', label: 'Correction' },
+                      { value: 'RECEIVED', label: t('stock.received') },
+                      { value: 'OPENING_STOCK', label: t('stock.opening') },
+                      { value: 'DAMAGED', label: t('stock.damaged') },
+                      { value: 'EXPIRED', label: t('stock.expired') },
+                      { value: 'CORRECTION', label: t('stock.correction') },
                     ]}
-                    placeholder="Select reason"
+                    placeholder={t('stock.selectReason')}
                   />
                 </FormField>
               <p className="text-xs leading-5 text-text-muted">
-                This creates an inventory record for the active branch.
+                {t('stock.recordHelp')}
               </p>
             </div>
           </Modal>
@@ -5267,8 +5319,8 @@ export default function ProductsPage({
 
         {pendingExistingVariantDelete && (
           <Modal
-            title="Delete variant?"
-            description="This action is permanent."
+            title={t('dialogs.deleteVariantTitle')}
+            description={t('common.permanent')}
             icon={<Trash2 size={20} />}
             size="sm"
             density="compact"
@@ -5285,7 +5337,7 @@ export default function ProductsPage({
                   disabled={deletingExistingVariant}
                   onClick={() => setPendingExistingVariantDelete(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -5295,22 +5347,21 @@ export default function ProductsPage({
                   onClick={() => void deleteExistingVariant()}
                 >
                   <Trash2 size={15} />
-                  {deletingExistingVariant ? 'Deleting…' : 'Delete variant'}
+                  {deletingExistingVariant
+                    ? t('common.deleting')
+                    : t('dialogs.deleteVariant')}
                 </Button>
               </>
             }
           >
             <div className="grid gap-4">
               <p className="text-sm leading-5 text-text-muted">
-                Permanently delete{' '}
-                <strong className="font-semibold text-text-main">
-                  {pendingExistingVariantDelete.name}
-                </strong>
-                .
+                {t('dialogs.permanentlyDeleteNamed', {
+                  name: pendingExistingVariantDelete.name,
+                })}
               </p>
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-800">
-                This removes its stock record. Variants with sales or stock
-                history cannot be deleted.
+                {t('dialogs.variantDeleteRestriction')}
               </p>
             </div>
           </Modal>

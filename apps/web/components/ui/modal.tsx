@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { Button } from './button';
+import { useI18n } from '../../lib/i18n';
 
 type ModalProps = {
   title: string;
@@ -34,6 +35,7 @@ export function Modal({
   density = 'default',
   labelledBy = 'modal-title',
 }: ModalProps) {
+  const { t } = useI18n();
   const compactHeader = density === 'compact' || density === 'compactNarrow';
   const narrowOnly = density === 'compactNarrow';
 
@@ -48,9 +50,9 @@ export function Modal({
         variant="overlay"
         className="absolute inset-0 h-full w-full rounded-none p-0"
         onClick={onClose}
-        aria-label="Close dialog"
+        aria-label={t('dialogs.close')}
       >
-        <span className="sr-only">Close dialog</span>
+        <span className="sr-only">{t('dialogs.close')}</span>
       </Button>
       <section
         className={`relative z-10 flex max-h-[calc(100vh-1.5rem)] w-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-card shadow-xl sm:max-h-[calc(100vh-3rem)] ${widths[size]}`}
@@ -97,7 +99,7 @@ export function Modal({
             size="icon"
             className="-mr-2 shrink-0"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X size={18} />
           </Button>

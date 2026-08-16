@@ -23,6 +23,7 @@ import {
   PageHeading,
   SectionCard,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 type ModifierOption = { id: string; name: string; priceAdjustment: number };
@@ -97,6 +98,7 @@ const patterns: Record<string, string> = {
 };
 
 function Barcode({ value }: { value: string }) {
+  const { t } = useI18n();
   const safe = value.toUpperCase().replace(/[^0-9A-Z. \-$/+%]/g, '-');
   const text = `*${safe}*`;
   const bars: { x: number; width: number }[] = [];
@@ -114,7 +116,7 @@ function Barcode({ value }: { value: string }) {
       className="h-16 w-full fill-text-main"
       viewBox={`0 0 ${x + 8} 52`}
       role="img"
-      aria-label={`Barcode ${safe}`}
+      aria-label={t('labels.barcodeNamed', { code: safe })}
     >
       {bars.map((bar, index) => (
         <rect key={index} x={bar.x} y="0" width={bar.width} height="44" />
@@ -132,6 +134,7 @@ function Barcode({ value }: { value: string }) {
 }
 
 export default function LabelsPage() {
+  const { t } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [productId, setProductId] = useState('');
   const [variantId, setVariantId] = useState('');
@@ -154,11 +157,11 @@ export default function LabelsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok)
-        throw new Error('Unable to load products. Please sign in again.');
+        throw new Error(t('labels.error.loadSignIn'));
       setProducts(await response.json());
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : 'Unable to load products.',
+        error instanceof Error ? error.message : t('labels.error.load'),
       );
       setMessageTone('error');
     } finally {
@@ -218,7 +221,7 @@ export default function LabelsPage() {
 
   function printLabels() {
     if (!canPrint) return;
-    setMessage(`${quantity} label${quantity === 1 ? '' : 's'} ready to print.`);
+    setMessage(t('labels.ready', { count: quantity }));
     setMessageTone('success');
     window.print();
   }
@@ -229,22 +232,22 @@ export default function LabelsPage() {
   );
   const codeSource = variant
     ? variant.barcode
-      ? 'Variant barcode'
-      : 'Variant SKU'
+      ? t('labels.variantBarcode')
+      : t('labels.variantSku')
     : product?.barcode
-      ? 'Product barcode'
-      : 'Product SKU';
+      ? t('labels.productBarcode')
+      : t('labels.productSku');
 
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Barcode labels"
-        title="Print labels"
+        eyebrow={t('labels.eyebrow')}
+        title={t('labels.title')}
         className="print-hide"
         actions={
           <Button onClick={printLabels} disabled={!canPrint}>
             <Printer size={16} />
-            Print {quantity} label{quantity === 1 ? '' : 's'}
+            {t('labels.printCount', { count: quantity })}
           </Button>
         }
       />
@@ -267,22 +270,22 @@ export default function LabelsPage() {
           )}
 
           <SectionCard
-            title="Label setup"
-            description="Choose item and quantity."
+            title={t('labels.setup')}
+            description={t('labels.setupHelp')}
             icon={<BarcodeIcon size={20} />}
           >
             <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2">
               <FormField
-                label="Product"
+                label={t('entity.product')}
                 required
-                help="Barcode first, then SKU."
+                help={t('labels.codePriority')}
               >
                 <CustomSelect
                   value={productId}
                   onChange={chooseProduct}
                   disabled={isLoading}
                   placeholder={
-                    isLoading ? 'Loading products...' : 'Select product'
+                    isLoading ? t('labels.loadingProducts') : t('promotions.selectProduct')
                   }
                   leadingIcon={<PackageSearch size={16} />}
                   options={products.map((item) => ({
@@ -295,14 +298,14 @@ export default function LabelsPage() {
 
               {requiresVariant ? (
                 <FormField
-                  label="Exact variant"
+                  label={t('labels.exactVariant')}
                   required
-                  help="Uses variant code."
+                  help={t('labels.variantCodeHelp')}
                 >
                   <CustomSelect
                     value={variantId}
                     onChange={setVariantId}
-                    placeholder="Select variant"
+                    placeholder={t('labels.selectVariant')}
                     leadingIcon={<Layers3 size={16} />}
                     options={activeVariants.map((item) => ({
                       value: item.id,
@@ -313,22 +316,22 @@ export default function LabelsPage() {
                 </FormField>
               ) : (
                 <FormField
-                  label="Barcode source"
-                  help="Barcode first, then SKU."
+                  label={t('labels.barcodeSource')}
+                  help={t('labels.codePriority')}
                 >
                   <div className="flex h-10 items-center gap-2 rounded-md border border-border-default bg-muted-surface px-3 text-sm font-semibold text-text-secondary shadow-2xs">
                     <BarcodeIcon size={16} className="text-text-muted" />
                     {product
-                      ? `${codeSource}: ${code || 'Unavailable'}`
-                      : 'Select a product first'}
+                      ? `${codeSource}: ${code || t('account.unavailable')}`
+                      : t('labels.selectProductFirst')}
                   </div>
                 </FormField>
               )}
 
               <FormField
-                label="Number of labels"
+                label={t('labels.number')}
                 required
-                help="Print 1–100."
+                help={t('labels.numberHelp')}
                 id="label-quantity"
               >
                 <Input
@@ -350,7 +353,7 @@ export default function LabelsPage() {
               </FormField>
 
               {product && (
-                <FormField label="Current label" sublabel="Preview">
+                <FormField label={t('labels.current')} sublabel={t('labels.preview')}>
                   <div className="flex min-h-10 items-center justify-between gap-3 rounded-md border border-border-default bg-muted-surface px-3 py-2 text-sm">
                     <span className="min-w-0 truncate font-semibold text-text-main">
                       {product.name}
@@ -369,10 +372,10 @@ export default function LabelsPage() {
                 <div>
                   <h3 className="m-0 flex items-center gap-2 text-sm font-bold text-text-main">
                     <SlidersHorizontal size={17} className="text-brand" />
-                    Label options
+                    {t('labels.options')}
                   </h3>
                   <p className="mt-1 mb-0 text-xs text-text-muted">
-                    Adds option text.
+                    {t('labels.optionsHelp')}
                   </p>
                 </div>
                 {product.modifierGroups.map((group) => (
@@ -381,7 +384,7 @@ export default function LabelsPage() {
                     className="rounded-lg border border-border-subtle bg-muted-surface p-5"
                   >
                     <legend className="px-2 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                      {group.name} · up to {group.maxSelections}
+                      {t('labels.groupLimit', { name: group.name, count: group.maxSelections })}
                     </legend>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {group.options.map((option) => {
@@ -400,7 +403,7 @@ export default function LabelsPage() {
                             <span className="shrink-0 text-xs font-semibold text-text-muted">
                               {option.priceAdjustment
                                 ? `+$${(option.priceAdjustment / 100).toFixed(2)}`
-                                : 'Included'}
+                                : t('labels.included')}
                             </span>
                           </Button>
                         );
@@ -416,10 +419,10 @@ export default function LabelsPage() {
                 {canPrint
                   ? `${codeSource}: ${code}`
                   : requiresVariant
-                    ? 'Select a variant to print.'
+                    ? t('labels.selectVariantToPrint')
                     : product
-                      ? 'Add barcode or SKU before printing.'
-                      : 'Select a product.'}
+                      ? t('labels.addCode')
+                      : t('labels.selectProduct')}
               </p>
               <Button
                 onClick={printLabels}
@@ -427,7 +430,7 @@ export default function LabelsPage() {
                 className="shrink-0"
               >
                 <Printer size={16} />
-                Print labels
+                {t('labels.print')}
               </Button>
             </div>
           </SectionCard>
@@ -437,11 +440,11 @@ export default function LabelsPage() {
       <section id="barcode-label-preview" className="pb-6">
         <PageContainer>
           <SectionCard
-            title="Label preview"
+            title={t('labels.previewTitle')}
             description={
               product
-                ? `${quantity} label${quantity === 1 ? '' : 's'} · ${product.name}`
-                : 'Select product.'
+                ? t('labels.previewCount', { count: quantity, name: product.name })
+                : t('labels.selectProduct')
             }
             icon={<Printer size={20} />}
             bodyPadding={false}
@@ -473,13 +476,13 @@ export default function LabelsPage() {
                 icon={<BarcodeIcon size={24} />}
                 title={
                   requiresVariant && product
-                    ? 'Select a variant'
-                    : 'No label preview yet'
+                    ? t('labels.selectVariant')
+                    : t('labels.emptyPreview')
                 }
                 description={
                   requiresVariant && product
-                    ? 'Choose a variant.'
-                    : 'Choose product with code.'
+                    ? t('labels.chooseVariant')
+                    : t('labels.chooseProductWithCode')
                 }
                 className="min-h-40"
               />

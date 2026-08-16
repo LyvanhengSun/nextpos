@@ -26,6 +26,7 @@ import {
   TabButton,
   TabCountBadge,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 type Variant = { id: string; name: string; sku: string };
@@ -99,21 +100,22 @@ function TablePager({
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }) {
+  const { t } = useI18n();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = total ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, total);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-4 py-3 sm:px-8">
       <span className="text-xs text-text-muted">
-        Showing{' '}
+        {t('inventory.showing')}{' '}
         <strong className="font-bold text-text-secondary">
           {start}–{end}
         </strong>{' '}
-        of <strong className="font-bold text-text-secondary">{total}</strong>
+        {t('inventory.of')} <strong className="font-bold text-text-secondary">{total}</strong>
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 text-xs text-text-muted">
-          <span>Rows</span>
+          <span>{t('inventory.rows')}</span>
           <CustomSelect
             value={String(pageSize)}
             onChange={(value) => onPageSizeChange(Number(value))}
@@ -125,10 +127,10 @@ function TablePager({
           />
         </div>
         <span className="text-xs text-text-muted">
-          Page {page} of {totalPages}
+          {t('inventory.pageOf', { page, total: totalPages })}
         </span>
         <Button
-          aria-label="Previous page"
+          aria-label={t('sales.previousPage')}
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
           variant="secondary"
@@ -138,7 +140,7 @@ function TablePager({
           <ChevronLeft size={16} />
         </Button>
         <Button
-          aria-label="Next page"
+          aria-label={t('sales.nextPage')}
           disabled={page === totalPages}
           onClick={() => onPageChange(page + 1)}
           variant="secondary"
@@ -153,6 +155,7 @@ function TablePager({
 }
 
 export default function InventoryPage() {
+  const { t, locale } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
@@ -213,7 +216,7 @@ export default function InventoryPage() {
       fetch(`${api}/auth/me`, { headers }),
       fetch(`${api}/products`, { headers }),
     ]);
-    if (!me.ok || !catalog.ok) throw new Error('Please sign in again.');
+    if (!me.ok || !catalog.ok) throw new Error(t('inventory.error.signIn'));
     const user = await me.json();
     setBranchId(user.branchId ?? '');
     setProducts(await catalog.json());
@@ -241,12 +244,12 @@ export default function InventoryPage() {
     const formElement = event.currentTarget;
     const form = Object.fromEntries(new FormData(formElement));
     if (!form.productId) {
-      showMessage('Select a product or variant to adjust.', 'error');
+      showMessage(t('inventory.error.selectAdjust'), 'error');
       return;
     }
     const quantityChange = Number(form.quantityChange);
     if (!Number.isInteger(quantityChange) || quantityChange === 0) {
-      showMessage('Enter a whole stock change, for example 20 or -2.', 'error');
+      showMessage(t('inventory.error.wholeChange'), 'error');
       return;
     }
     try {
@@ -263,16 +266,16 @@ export default function InventoryPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        showMessage(data.message ?? 'Unable to adjust stock.', 'error');
+        showMessage(data.message ?? t('inventory.error.adjust'), 'error');
         return;
       }
       formElement.reset();
       setAdjustProductId('');
       setAdjustReason('RECEIVED');
-      showMessage('Stock adjustment saved.', 'success');
+      showMessage(t('inventory.success.adjusted'), 'success');
       await load();
     } catch {
-      showMessage('The API server did not return a response.', 'error');
+      showMessage(t('inventory.error.noResponse'), 'error');
     }
   }
   async function saveCount(event: FormEvent<HTMLFormElement>) {
@@ -280,12 +283,12 @@ export default function InventoryPage() {
     const formElement = event.currentTarget;
     const form = Object.fromEntries(new FormData(formElement));
     if (!form.stockItem) {
-      showMessage('Select a product or variant to count.', 'error');
+      showMessage(t('inventory.error.selectCount'), 'error');
       return;
     }
     const countedQuantity = Number(form.countedQuantity);
     if (!Number.isInteger(countedQuantity) || countedQuantity < 0) {
-      showMessage('Enter a whole counted quantity of zero or more.', 'error');
+      showMessage(t('inventory.error.countQuantity'), 'error');
       return;
     }
     const [kind, id] = String(form.stockItem ?? '').split(':');
@@ -301,13 +304,13 @@ export default function InventoryPage() {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      showMessage(data.message ?? 'Unable to save stock count.', 'error');
+      showMessage(data.message ?? t('inventory.error.saveCount'), 'error');
       return;
     }
     formElement.reset();
     setCountProductId('');
     showMessage(
-      `${data.product}: counted ${data.countedQuantity}. Difference: ${data.difference > 0 ? '+' : ''}${data.difference}.`,
+      t('inventory.success.counted', { product: data.product, count: data.countedQuantity, difference: `${data.difference > 0 ? '+' : ''}${data.difference}` }),
       'success',
     );
     await load();
@@ -369,14 +372,14 @@ export default function InventoryPage() {
   const readableReason = (reason: string) => {
     const [type, detail] = reason.split(':', 2);
     const labels: Record<string, string> = {
-      RECEIVED: 'Stock received',
-      OPENING_STOCK: 'Opening stock',
-      DAMAGED: 'Damaged',
-      EXPIRED: 'Expired',
-      CORRECTION: 'Correction',
-      STOCK_COUNT: 'Physical count',
-      TRANSFER_IN: 'Transfer in',
-      TRANSFER_OUT: 'Transfer out',
+      RECEIVED: t('stock.received'),
+      OPENING_STOCK: t('stock.opening'),
+      DAMAGED: t('stock.damaged'),
+      EXPIRED: t('stock.expired'),
+      CORRECTION: t('stock.correction'),
+      STOCK_COUNT: t('inventory.physicalCount'),
+      TRANSFER_IN: t('inventory.transferIn'),
+      TRANSFER_OUT: t('inventory.transferOut'),
     };
     return detail && type === 'STOCK_COUNT'
       ? `${labels[type]} · ${detail}`
@@ -411,7 +414,7 @@ export default function InventoryPage() {
       value={value}
       onChange={onChange}
       options={options}
-      placeholder="Select product or variant"
+      placeholder={t('inventory.selectProduct')}
     />
   );
   const searchBox = (
@@ -429,41 +432,41 @@ export default function InventoryPage() {
   );
 
   const tabs = [
-    { key: 'overview', label: 'Overview', icon: Boxes, href: '/inventory' },
+    { key: 'overview', label: t('inventory.overview'), icon: Boxes, href: '/inventory' },
     {
       key: 'stock',
-      label: 'Current stock',
+      label: t('inventory.currentStock'),
       count: items.length,
       icon: ClipboardCheck,
       href: '/inventory/stock',
     },
     {
       key: 'activity',
-      label: 'Activity',
+      label: t('inventory.activity'),
       count: activity.length,
       icon: History,
       href: '/inventory/activity',
     },
     {
       key: 'valuation',
-      label: 'Valuation',
+      label: t('inventory.valuation'),
       icon: SlidersHorizontal,
       href: '/inventory/valuation',
     },
     {
       key: 'reorder',
-      label: 'Reorder',
+      label: t('inventory.reorder'),
       count: lowStock.length,
       icon: AlertTriangle,
       href: '/inventory/reorder',
     },
   ] as const;
   const reasonOptions = [
-    { value: 'RECEIVED', label: 'Received stock' },
-    { value: 'OPENING_STOCK', label: 'Opening stock' },
-    { value: 'DAMAGED', label: 'Damaged' },
-    { value: 'EXPIRED', label: 'Expired' },
-    { value: 'CORRECTION', label: 'Correction' },
+    { value: 'RECEIVED', label: t('stock.received') },
+    { value: 'OPENING_STOCK', label: t('stock.opening') },
+    { value: 'DAMAGED', label: t('stock.damaged') },
+    { value: 'EXPIRED', label: t('stock.expired') },
+    { value: 'CORRECTION', label: t('stock.correction') },
   ];
   const tableHead =
     'px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-text-secondary';
@@ -472,8 +475,8 @@ export default function InventoryPage() {
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Inventory"
-        title="Stock management"
+        eyebrow={t('nav.inventory')}
+        title={t('inventory.stockManagement')}
         tabs={
           <div className="flex items-center gap-7 overflow-x-auto overflow-y-hidden border-b border-border-subtle [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {tabs.map((tab) => {
@@ -506,11 +509,11 @@ export default function InventoryPage() {
         {activeTab === 'overview' && (
           <>
             <SectionCard
-              title="Low-stock alerts"
+              title={t('dashboard.lowStockAlerts')}
               description={
                 lowStock.length
-                  ? `${lowStock.length} item${lowStock.length === 1 ? '' : 's'} need attention.`
-                    : 'All stock is above alert levels.'
+                  ? t('inventory.needAttention', { count: lowStock.length })
+                    : t('inventory.aboveAlerts')
               }
               icon={<AlertTriangle size={20} />}
               actions={
@@ -519,11 +522,11 @@ export default function InventoryPage() {
                     variant="warningSubtle"
                     onClick={() => router.push('/inventory/reorder')}
                   >
-                    View all {lowStock.length}
+                    {t('inventory.viewAll', { count: lowStock.length })}
                   </Button>
                 ) : (
                   <StatusBadge tone={lowStock.length ? 'warning' : 'success'}>
-                    {lowStock.length ? 'Needs review' : 'Healthy'}
+                    {lowStock.length ? t('inventory.needsReview') : t('inventory.healthy')}
                   </StatusBadge>
                 )
               }
@@ -542,32 +545,32 @@ export default function InventoryPage() {
                           {item.variant ? ` · ${item.variant.name}` : ''}
                         </p>
                         <p className="mt-1 mb-0 text-xs text-text-muted">
-                          Alert at {item.product.reorderLevel}
+                          {t('inventory.alertAt', { level: item.product.reorderLevel })}
                         </p>
                       </div>
                       <span className="shrink-0 text-xs font-semibold text-amber-700">
                         <strong className="text-base">{item.quantity}</strong>{' '}
-                        left
+                        {t('inventory.left')}
                       </span>
                     </article>
                   ))}
                 </div>
               ) : (
                 <p className="m-0 text-sm font-semibold text-emerald-700">
-                  Inventory levels look healthy.
+                  {t('inventory.levelsHealthy')}
                 </p>
               )}
             </SectionCard>
 
             <section className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
               <SectionCard
-                title="Physical stock count"
-                description="Set stock to the quantity actually counted."
+                title={t('inventory.physicalCount')}
+                description={t('inventory.physicalCountHelp')}
                 icon={<ClipboardCheck size={20} />}
                 className="h-full"
               >
                 <form onSubmit={saveCount} className="flex flex-col gap-4">
-                  <FormField label="Product or variant" id="stockItem" required>
+                  <FormField label={t('inventory.productVariant')} id="stockItem" required>
                     {stockSelect(
                       'stockItem',
                       countProductId,
@@ -576,12 +579,12 @@ export default function InventoryPage() {
                   </FormField>
                   {countProductId && (
                     <AlertBanner tone="info">
-                      Current system quantity:{' '}
+                      {t('inventory.currentQuantity')}{' '}
                       <strong>{expectedQuantity}</strong>
                     </AlertBanner>
                   )}
                   <FormField
-                    label="Counted quantity"
+                    label={t('inventory.countedQuantity')}
                     id="countedQuantity"
                     required
                   >
@@ -594,27 +597,27 @@ export default function InventoryPage() {
                       step="1"
                     />
                   </FormField>
-                  <FormField label="Note" id="countNote" sublabel="(optional)">
+                  <FormField label={t('pos.note')} id="countNote" sublabel={t('common.optional')}>
                     <Input
                       id="countNote"
                       name="note"
-                      placeholder="e.g. Monthly shelf count"
+                      placeholder={t('inventory.countNotePlaceholder')}
                     />
                   </FormField>
                   <div className="flex justify-end">
-                    <Button type="submit">Save physical count</Button>
+                    <Button type="submit">{t('inventory.saveCount')}</Button>
                   </div>
                 </form>
               </SectionCard>
 
               <SectionCard
-                title="Adjust stock"
-                description="Add or remove stock with a recorded reason."
+                title={t('stock.adjust')}
+                description={t('inventory.adjustHelp')}
                 icon={<SlidersHorizontal size={20} />}
                 className="h-full"
               >
                 <form onSubmit={adjust} className="flex flex-col gap-4">
-                  <FormField label="Product or variant" id="productId" required>
+                  <FormField label={t('inventory.productVariant')} id="productId" required>
                     {stockSelect(
                       'productId',
                       adjustProductId,
@@ -622,7 +625,7 @@ export default function InventoryPage() {
                     )}
                   </FormField>
                   <FormField
-                    label="Quantity change"
+                    label={t('stock.quantityChange')}
                     id="quantityChange"
                     required
                   >
@@ -631,10 +634,10 @@ export default function InventoryPage() {
                       id="quantityChange"
                       name="quantityChange"
                       type="number"
-                      placeholder="e.g. 10 or -2"
+                      placeholder={t('dialogs.quantityPlaceholder')}
                     />
                   </FormField>
-                  <FormField label="Reason" id="reason" required>
+                  <FormField label={t('stock.reason')} id="reason" required>
                     <CustomSelect
                       name="reason"
                       value={adjustReason}
@@ -643,7 +646,7 @@ export default function InventoryPage() {
                     />
                   </FormField>
                   <div className="flex justify-end">
-                    <Button type="submit">Save adjustment</Button>
+                    <Button type="submit">{t('stock.saveAdjustment')}</Button>
                   </div>
                 </form>
               </SectionCard>
@@ -653,8 +656,8 @@ export default function InventoryPage() {
 
         {activeTab === 'stock' && (
           <SectionCard
-            title="Current stock"
-            description={`${stockResults.length} of ${items.length} tracked item${items.length === 1 ? '' : 's'} in the active branch.`}
+            title={t('inventory.currentStock')}
+            description={t('inventory.trackedCount', { shown: stockResults.length, total: items.length })}
             icon={<ClipboardCheck size={20} />}
             bodyPadding={false}
           >
@@ -665,7 +668,7 @@ export default function InventoryPage() {
                   setStockQuery(value);
                   setStockPage(1);
                 },
-                'Search product or SKU',
+                t('inventory.searchProductSku'),
               )}
               <CustomSelect
                 value={stockStatus}
@@ -674,9 +677,9 @@ export default function InventoryPage() {
                   setStockPage(1);
                 }}
                 options={[
-                  { value: 'all', label: 'All stock' },
-                  { value: 'low', label: 'Low stock' },
-                  { value: 'in', label: 'In stock' },
+                  { value: 'all', label: t('inventory.allStock') },
+                  { value: 'low', label: t('inventory.lowStock') },
+                  { value: 'in', label: t('inventory.inStock') },
                 ]}
                 className="w-full sm:w-40"
               />
@@ -688,11 +691,11 @@ export default function InventoryPage() {
                     <thead className="border-b border-border-subtle bg-muted-surface">
                       <tr>
                         {[
-                          'Product',
+                          t('entity.product'),
                           'SKU',
-                          'On hand',
-                          'Alert level',
-                          'Status',
+                          t('inventory.onHand'),
+                          t('inventory.alertLevel'),
+                          t('products.status'),
                         ].map((heading) => (
                           <th key={heading} className={tableHead}>
                             {heading}
@@ -734,7 +737,7 @@ export default function InventoryPage() {
                             </td>
                             <td className={tableCell}>
                               <StatusBadge tone={low ? 'warning' : 'success'}>
-                                {low ? 'Low stock' : 'In stock'}
+                                {low ? t('inventory.lowStock') : t('inventory.inStock')}
                               </StatusBadge>
                             </td>
                           </tr>
@@ -756,8 +759,8 @@ export default function InventoryPage() {
               </>
             ) : (
               <EmptyState
-                title="No stock items found"
-                description="Try a different search or stock filter."
+                title={t('inventory.noStock')}
+                description={t('inventory.noStockHelp')}
                 icon={<Boxes size={24} />}
               />
             )}
@@ -766,8 +769,8 @@ export default function InventoryPage() {
 
         {activeTab === 'activity' && (
           <SectionCard
-            title="Recent stock activity"
-            description={`${activityResults.length} of ${activity.length} activity record${activity.length === 1 ? '' : 's'}.`}
+            title={t('inventory.recentActivity')}
+            description={t('inventory.activityCount', { shown: activityResults.length, total: activity.length })}
             icon={<History size={20} />}
             bodyPadding={false}
           >
@@ -778,14 +781,14 @@ export default function InventoryPage() {
                   setActivityQuery(value);
                   setActivityPage(1);
                 },
-                'Search product or reason',
+                t('inventory.searchReason'),
               )}
               <div className="inline-flex rounded-md bg-muted-surface p-1">
                 {(
                   [
-                    { key: 'all', label: 'All' },
-                    { key: 'in', label: 'Added' },
-                    { key: 'out', label: 'Removed' },
+                    { key: 'all', label: t('common.all') },
+                    { key: 'in', label: t('inventory.added') },
+                    { key: 'out', label: t('inventory.removed') },
                   ] as const
                 ).map((filter) => (
                   <Button
@@ -810,11 +813,16 @@ export default function InventoryPage() {
                   <table className="w-full min-w-[640px] border-collapse">
                     <thead className="border-b border-border-subtle bg-muted-surface">
                       <tr>
-                        {['When', 'Product', 'Reason', 'Change'].map(
+                        {[
+                          t('inventory.when'),
+                          t('entity.product'),
+                          t('stock.reason'),
+                          t('inventory.change'),
+                        ].map(
                           (heading) => (
                             <th
                               key={heading}
-                              className={`${tableHead} ${heading === 'Change' ? 'text-right' : ''}`}
+                              className={`${tableHead} ${heading === t('inventory.change') ? 'text-right' : ''}`}
                             >
                               {heading}
                             </th>
@@ -832,7 +840,7 @@ export default function InventoryPage() {
                             className={`${tableCell} whitespace-nowrap text-xs text-text-muted`}
                           >
                             {new Date(entry.createdAt).toLocaleString(
-                              undefined,
+                              locale === 'km' ? 'km-KH' : 'en-US',
                               { dateStyle: 'medium', timeStyle: 'short' },
                             )}
                           </td>
@@ -874,8 +882,8 @@ export default function InventoryPage() {
               </>
             ) : (
               <EmptyState
-                title="No activity found"
-                description="Try a different search or movement filter."
+                title={t('inventory.noActivity')}
+                description={t('inventory.noActivityHelp')}
                 icon={<History size={24} />}
               />
             )}
@@ -884,25 +892,25 @@ export default function InventoryPage() {
 
         {activeTab === 'valuation' && (
           <SectionCard
-            title="Inventory valuation"
-            description="Stock value using weighted-average cost."
+            title={t('inventory.valuationTitle')}
+            description={t('inventory.valuationHelp')}
             icon={<SlidersHorizontal size={20} />}
             bodyPadding={false}
           >
             <div className="grid grid-cols-1 border-b border-border-subtle sm:grid-cols-3 sm:divide-x sm:divide-border-subtle">
               {[
                 {
-                  label: 'Stock value',
+                  label: t('inventory.stockValue'),
                   value: `$${((valuation?.totalValue ?? 0) / 100).toFixed(2)}`,
                   tone: 'text-brand',
                 },
                 {
-                  label: 'On-hand units',
+                  label: t('inventory.onHandUnits'),
                   value: valuation?.onHandUnits ?? 0,
                   tone: 'text-text-main',
                 },
                 {
-                  label: 'Missing costs',
+                  label: t('inventory.missingCosts'),
                   value: valuation?.missingCostItems ?? 0,
                   tone: valuation?.missingCostItems
                     ? 'text-amber-700'
@@ -931,7 +939,7 @@ export default function InventoryPage() {
                   setValuationQuery(value);
                   setValuationPage(1);
                 },
-                'Search product or SKU',
+                t('inventory.searchProductSku'),
               )}
             </div>
             {valuationRows.length ? (
@@ -941,15 +949,15 @@ export default function InventoryPage() {
                     <thead className="border-b border-border-subtle bg-muted-surface">
                       <tr>
                         {[
-                          'Product',
+                          t('entity.product'),
                           'SKU',
-                          'On hand',
-                          'Unit cost',
-                          'Total value',
+                          t('inventory.onHand'),
+                          t('inventory.unitCost'),
+                          t('inventory.totalValue'),
                         ].map((heading) => (
                           <th
                             key={heading}
-                            className={`${tableHead} ${heading === 'Unit cost' || heading === 'Total value' ? 'text-right' : ''}`}
+                            className={`${tableHead} ${heading === t('inventory.unitCost') || heading === t('inventory.totalValue') ? 'text-right' : ''}`}
                           >
                             {heading}
                           </th>
@@ -1008,8 +1016,8 @@ export default function InventoryPage() {
               </>
             ) : (
               <EmptyState
-                title="No valuation records found"
-                description="Costed inventory will appear here."
+                title={t('inventory.noValuation')}
+                description={t('inventory.noValuationHelp')}
                 icon={<SlidersHorizontal size={24} />}
               />
             )}
@@ -1018,15 +1026,15 @@ export default function InventoryPage() {
 
         {activeTab === 'reorder' && (
           <SectionCard
-            title="Reorder recommendations"
-            description={`${reorderResult?.items.length ?? lowStock.length} items at or below reorder alert level.`}
+            title={t('inventory.reorderTitle')}
+            description={t('inventory.reorderCount', { count: reorderResult?.items.length ?? lowStock.length })}
             icon={<AlertTriangle size={20} />}
             bodyPadding={false}
           >
             {(reorderResult?.items.length ?? 0) === 0 ? (
               <EmptyState
-                title="Inventory is well stocked"
-                description="No items currently need reordering."
+                title={t('inventory.wellStocked')}
+                description={t('inventory.noReorder')}
                 icon={<ClipboardCheck size={24} />}
               />
             ) : (
@@ -1035,16 +1043,21 @@ export default function InventoryPage() {
                   <thead className="border-b border-border-subtle bg-muted-surface">
                     <tr>
                       {[
-                        'Product',
+                        t('entity.product'),
                         'SKU',
-                        'Current stock',
-                        'Alert level',
-                        'Target stock',
-                        'Suggested reorder',
+                        t('inventory.currentStock'),
+                        t('inventory.alertLevel'),
+                        t('inventory.targetStock'),
+                        t('inventory.suggestedReorder'),
                       ].map((heading) => (
                         <th
                           key={heading}
-                          className={`${tableHead} ${['Current stock', 'Alert level', 'Target stock', 'Suggested reorder'].includes(heading) ? 'text-right' : ''}`}
+                          className={`${tableHead} ${[
+                            t('inventory.currentStock'),
+                            t('inventory.alertLevel'),
+                            t('inventory.targetStock'),
+                            t('inventory.suggestedReorder'),
+                          ].includes(heading) ? 'text-right' : ''}`}
                         >
                           {heading}
                         </th>

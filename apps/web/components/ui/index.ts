@@ -11,6 +11,7 @@ export { EmptyState } from './empty-state';
 export { FormField } from './form-field';
 export { FormHelp } from './form-help';
 export { Input } from './input';
+export { LanguageSwitcher } from './language-switcher';
 export { Modal } from './modal';
 export { NumericKeypad } from './numeric-keypad';
 export { PageHeading } from './page-heading';

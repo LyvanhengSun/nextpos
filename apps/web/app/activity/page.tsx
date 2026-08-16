@@ -30,6 +30,7 @@ import {
   TabButton,
   TabCountBadge,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -55,7 +56,7 @@ const categories = [
 
 type Category = (typeof categories)[number] | 'Other';
 
-const actionLabel = (action: string) =>
+const humanize = (action: string) =>
   action
     .toLowerCase()
     .replaceAll('_', ' ')
@@ -105,19 +106,20 @@ function categoryIcon(category: Category) {
   }
 }
 
-function metadataValue(value: unknown) {
-  if (value === null) return 'None';
+function metadataValue(value: unknown, none: string, updated: string) {
+  if (value === null) return none;
   if (typeof value === 'object') {
     try {
       return JSON.stringify(value);
     } catch {
-      return 'Updated';
+      return updated;
     }
   }
   return String(value);
 }
 
 export default function ActivityPage() {
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [logs, setLogs] = useState<Log[]>([]);
   const [message, setMessage] = useState('');
@@ -165,7 +167,7 @@ export default function ActivityPage() {
         throw new Error(
           !Array.isArray(data) && data.message
             ? data.message
-            : 'Only the owner can view activity logs.',
+            : t('activity.error.ownerOnly'),
         );
       }
       setLogs(Array.isArray(data) ? data : []);
@@ -173,7 +175,7 @@ export default function ActivityPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to load activity logs.',
+          : t('activity.error.load'),
       );
     } finally {
       setIsLoading(false);
@@ -183,6 +185,28 @@ export default function ActivityPage() {
   useEffect(() => {
     void checkRoleAndLoad();
   }, []);
+
+  const knownActions = new Set([
+    'DISCOUNT', 'MANAGER_APPROVAL_GRANTED', 'TERMINAL_UNLOCKED', 'BRANCH_CREATED',
+    'BRANCH_UPDATED', 'BUSINESS_CREATED', 'BUSINESS_SETTINGS_UPDATED',
+    'BUSINESS_EXPENSE_RECORDED', 'PHYSICAL_STOCK_COUNT_RECORDED',
+    'VARIANT_PHYSICAL_STOCK_COUNT_RECORDED', 'VARIANT_STOCK_ADJUSTED',
+    'DISCOUNT_APPROVED_AT_CHECKOUT', 'SALE_HELD', 'SALE_ITEMS_RETURNED',
+    'SALE_REFUNDED', 'PRODUCTS_IMPORTED_FROM_CSV', 'PURCHASE_ORDER_APPROVED',
+    'PURCHASE_ORDER_CANCELLED', 'PURCHASE_ORDER_CHANGE_APPROVED',
+    'PURCHASE_ORDER_CHANGE_REQUESTED', 'PURCHASE_ORDER_CREATED',
+    'PURCHASE_ORDER_DISPATCHED', 'PURCHASE_ORDER_REJECTED',
+    'PURCHASE_ORDER_SUBMITTED_FOR_APPROVAL', 'PURCHASE_ORDER_SUPPLIER_CONFIRMED',
+    'PURCHASE_ORDER_UPDATED', 'LOCAL_OWNER_PASSWORD_RESET', 'SHIFT_CLOSED',
+    'SHIFT_OPENED', 'STAFF_CREATED', 'STAFF_PASSWORD_RESET', 'STAFF_PIN_SET',
+    'STAFF_UPDATED', 'SUPPLIER_INVOICE_CREATED', 'SUPPLIER_INVOICE_CREDIT_RECORDED',
+    'SUPPLIER_INVOICE_DISPUTED', 'SUPPLIER_INVOICE_DISPUTE_RESOLVED',
+    'SUPPLIER_INVOICE_PAYMENT_RECORDED', 'SUPPLIER_CREATED',
+  ]);
+  const actionLabel = (action: string) =>
+    knownActions.has(action)
+      ? t(`activity.action.${action}` as Parameters<typeof t>[0])
+      : humanize(action);
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -209,7 +233,7 @@ export default function ActivityPage() {
 
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Owner control" title="Activity logs" />
+      <PageHeading eyebrow={t('activity.eyebrow')} title={t('activity.title')} />
 
       <div>
         <PageContainer>
@@ -221,14 +245,14 @@ export default function ActivityPage() {
             <SectionCard>
               <EmptyState
                 icon={<ShieldAlert size={28} />}
-                title="Access restricted"
-                description="Owner only."
+                title={t('activity.restricted')}
+                description={t('activity.ownerOnly')}
               />
             </SectionCard>
           ) : (
             <SectionCard
-              title="Audit trail"
-              description="Latest events"
+              title={t('activity.auditTrail')}
+              description={t('activity.latestEvents')}
               icon={<Activity size={20} />}
               actions={
                 !isLoading ? (
@@ -245,14 +269,14 @@ export default function ActivityPage() {
                     type="search"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search activity"
+                    placeholder={t('activity.search')}
                     prefixIcon={<Search size={16} />}
-                    aria-label="Search activity logs"
+                    aria-label={t('activity.searchLabel')}
                   />
 
                   <nav
                     className="flex items-center gap-7 overflow-x-auto overflow-y-hidden border-b border-border-subtle [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    aria-label="Filter activity by category"
+                    aria-label={t('activity.filterLabel')}
                   >
                     {categories.map((item) => {
                       const active = category === item;
@@ -264,7 +288,7 @@ export default function ActivityPage() {
                           aria-pressed={active}
                           onClick={() => setCategory(item)}
                         >
-                          {item}
+                          {t(`activity.category.${item}` as const)}
                         </TabButton>
                       );
                     })}
@@ -275,14 +299,14 @@ export default function ActivityPage() {
               {isLoading ? (
                 <EmptyState
                   icon={<Activity size={24} />}
-                  title="Loading activity"
-                  description="Please wait."
+                  title={t('activity.loading')}
+                  description={t('activity.pleaseWait')}
                 />
               ) : filtered.length === 0 ? (
                 <EmptyState
                   icon={<Search size={24} />}
-                  title="No matching activity"
-                  description="Try another search or filter."
+                  title={t('activity.empty')}
+                  description={t('activity.emptyHelp')}
                 />
               ) : (
                 <div className="divide-y divide-border-subtle">
@@ -309,7 +333,7 @@ export default function ActivityPage() {
                                 {actionLabel(log.action)}
                               </h3>
                               <StatusBadge tone="neutral">
-                                {logCategory}
+                                {t(`activity.category.${logCategory === 'Other' ? 'Other' : logCategory}` as Parameters<typeof t>[0])}
                               </StatusBadge>
                             </div>
 
@@ -317,13 +341,13 @@ export default function ActivityPage() {
                               <span className="inline-flex min-w-0 items-center gap-1.5">
                                 <UserRound size={14} />
                                 <span className="truncate font-semibold text-text-secondary">
-                                  {log.actor || 'System'}
+                                  {log.actor || t('activity.system')}
                                 </span>
                               </span>
                               <span className="inline-flex min-w-0 items-center gap-1.5">
                                 <Database size={14} />
                                 <span className="truncate">
-                                  {log.entityType || 'Record'}
+                                  {log.entityType || t('activity.record')}
                                 </span>
                               </span>
                               {log.entityId && (
@@ -344,10 +368,10 @@ export default function ActivityPage() {
                                     className="inline-flex max-w-full items-center gap-1 rounded-md border border-border-subtle bg-muted-surface px-2 py-1 text-xs text-text-muted"
                                   >
                                     <strong className="font-bold text-text-secondary">
-                                      {actionLabel(key)}:
+                                      {humanize(key)}:
                                     </strong>
                                     <span className="max-w-72 truncate">
-                                      {metadataValue(value)}
+                                      {metadataValue(value, t('activity.none'), t('activity.updated'))}
                                     </span>
                                   </span>
                                 ))}
@@ -361,7 +385,7 @@ export default function ActivityPage() {
                           className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-text-muted"
                         >
                           <Clock3 size={14} />
-                          {new Date(log.createdAt).toLocaleString()}
+                          {new Date(log.createdAt).toLocaleString(locale === 'km' ? 'km-KH' : 'en-US')}
                         </time>
                       </article>
                     );

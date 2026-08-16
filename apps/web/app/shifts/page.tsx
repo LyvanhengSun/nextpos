@@ -25,6 +25,7 @@ import {
   StatusBadge,
 } from '../../components/ui/';
 import { PageContainer } from '../../components/layout/page-container';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 type Movement = {
@@ -53,19 +54,19 @@ type Approver = {
 const money = (value: number) => `$${(value / 100).toFixed(2)}`;
 async function readResponse(
   response: Response,
+  unexpectedMessage: string,
 ): Promise<Record<string, unknown> | null> {
   const text = await response.text();
   if (!text) return null;
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(
-      'The API returned an unexpected response. Restart the API and try again.',
-    );
+    throw new Error(unexpectedMessage);
   }
 }
 
 export default function ShiftsPage() {
+  const { t, locale } = useI18n();
   const [shift, setShift] = useState<Shift | null>(null);
   const [history, setHistory] = useState<Shift[]>([]);
   const [historyTotal, setHistoryTotal] = useState(0);
@@ -108,14 +109,15 @@ export default function ShiftsPage() {
         { headers },
       ),
     ]);
-    if (!me.ok) throw new Error('Please sign in again.');
-    const user = await readResponse(me);
+    if (!me.ok) throw new Error(t('shifts.error.signIn'));
+    const unexpected = t('shifts.error.unexpected');
+    const user = await readResponse(me, unexpected);
     if (!user || typeof user.branchId !== 'string')
-      throw new Error('Unable to load your branch.');
+      throw new Error(t('shifts.error.branch'));
     setBranchId(user.branchId);
     setRole(String(user.role ?? '').toUpperCase());
     if (managerList.ok) {
-      const list = (await readResponse(managerList)) as unknown as Approver[];
+      const list = (await readResponse(managerList, unexpected)) as unknown as Approver[];
       if (Array.isArray(list)) {
         setApprovers(list);
         if (list.length === 1) setApprovalUserId(list[0].id);
@@ -123,7 +125,7 @@ export default function ShiftsPage() {
     }
     setShift(
       (current.ok
-        ? await readResponse(current)
+        ? await readResponse(current, unexpected)
         : null) as unknown as Shift | null,
     );
     if (past.ok) {
@@ -162,12 +164,12 @@ export default function ShiftsPage() {
           ),
         },
       );
-      const data = await readResponse(response);
+      const data = await readResponse(response, t('shifts.error.unexpected'));
       if (!response.ok) {
         const errorMessage =
           typeof data?.message === 'string'
             ? data.message
-            : 'Unable to save shift.';
+            : t('shifts.error.save');
         if (/reason for the cash variance/i.test(errorMessage)) {
           setNeedsVarianceReason(true);
         }
@@ -184,14 +186,21 @@ export default function ShiftsPage() {
       ) {
         const difference = data.difference / 100;
         setMessage(
-          `Shift closed. Expected ${money(data.expectedCash)} · ${difference === 0 ? 'balanced' : difference > 0 ? `${money(Math.round(difference * 100))} over` : `${money(Math.round(-difference * 100))} short`}.`,
+          t('shifts.success.closed', {
+            expected: money(data.expectedCash),
+            result: difference === 0
+              ? t('shifts.balanced')
+              : difference > 0
+                ? t('shifts.overAmount', { amount: money(Math.round(difference * 100)) })
+                : t('shifts.shortAmount', { amount: money(Math.round(-difference * 100)) }),
+          }),
         );
-      } else setMessage('Shift opened.');
+      } else setMessage(t('shifts.success.opened'));
       if (closing) setCloseOpen(false);
       await load();
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : 'Unable to save shift.',
+        error instanceof Error ? error.message : t('shifts.error.save'),
       );
     }
   }
@@ -210,12 +219,12 @@ export default function ShiftsPage() {
             : {}),
         }),
       });
-      const data = await readResponse(response);
+      const data = await readResponse(response, t('shifts.error.unexpected'));
       if (!response.ok) {
         setMessage(
           typeof data?.message === 'string'
             ? data.message
-            : 'Unable to record cash movement.',
+            : t('shifts.error.movement'),
         );
         return;
       }
@@ -225,15 +234,15 @@ export default function ShiftsPage() {
       setApprovalMessage('');
       setMessage(
         movementType === 'CASH_IN'
-          ? 'Cash added to the drawer.'
-          : 'Cash removed from the drawer.',
+          ? t('shifts.success.cashIn')
+          : t('shifts.success.cashOut'),
       );
       await load();
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to record cash movement.',
+          : t('shifts.error.movement'),
       );
     }
   }
@@ -248,12 +257,12 @@ export default function ShiftsPage() {
           action: 'CASH_OUT',
         }),
       });
-      const data = await readResponse(response);
+      const data = await readResponse(response, t('shifts.error.unexpected'));
       if (!response.ok) {
         setApprovalMessage(
           typeof data?.message === 'string'
             ? data.message
-            : 'Unable to approve cash-out.',
+            : t('shifts.error.approveCashOut'),
         );
         return;
       }
@@ -264,10 +273,10 @@ export default function ShiftsPage() {
       setCashOutApprovalToken(result.approvalToken);
       setApprovalPin('');
       setApprovalMessage(
-        `Approved by ${result.manager.firstName} ${result.manager.lastName}. Record this cash-out within 2 minutes.`,
+        t('shifts.approvedBy', { name: `${result.manager.firstName} ${result.manager.lastName}` }),
       );
     } catch {
-      setApprovalMessage('Unable to approve cash-out.');
+      setApprovalMessage(t('shifts.error.approveCashOut'));
     }
   }
   const expectedCash =
@@ -295,31 +304,31 @@ export default function ShiftsPage() {
   const summaryCards = shift
     ? [
         {
-          label: 'Opening cash',
+          label: t('shifts.openingCash'),
           value: money(shift.openingCash),
           Icon: CircleDollarSign,
           tone: 'info',
         },
         {
-          label: 'Drawer movements',
+          label: t('shifts.drawerMovements'),
           value: `${drawerMovement >= 0 ? '+' : ''}${money(drawerMovement)}`,
           Icon: drawerMovement >= 0 ? BanknoteArrowUp : BanknoteArrowDown,
           tone: drawerMovement >= 0 ? 'success' : 'danger',
         },
         {
-          label: 'Expected cash',
+          label: t('shifts.expectedCash'),
           value: money(expectedCash),
           Icon: CircleDollarSign,
           tone: 'info',
         },
         {
-          label: 'Opened',
+          label: t('shifts.opened'),
           value: shift.openedAt
-            ? new Date(shift.openedAt).toLocaleTimeString([], {
+            ? new Date(shift.openedAt).toLocaleTimeString(locale === 'km' ? 'km-KH' : 'en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
               })
-            : 'Now',
+            : t('shifts.now'),
           Icon: ClipboardCheck,
           tone: 'neutral',
         },
@@ -329,8 +338,8 @@ export default function ShiftsPage() {
   return (
     <main className="w-full pb-16">
       <PageHeading
-        eyebrow="Cash drawer"
-        title={shift ? 'Active cash shift' : 'Open a cash shift'}
+        eyebrow={t('shifts.eyebrow')}
+        title={shift ? t('shifts.active') : t('shifts.openPrompt')}
       />
 
       <div>
@@ -387,11 +396,11 @@ export default function ShiftsPage() {
               }
             >
               <SectionCard
-                title={shift ? 'Close shift' : 'Open shift'}
+                title={shift ? t('shifts.close') : t('shifts.open')}
                 description={
                   shift
-                    ? 'Count the drawer and confirm the final cash.'
-                    : 'Enter the starting cash for change.'
+                    ? t('shifts.closeHelp')
+                    : t('shifts.openHelp')
                 }
                 icon={
                   shift ? (
@@ -414,7 +423,7 @@ export default function ShiftsPage() {
                 >
                   {!shift ? (
                     <FormField
-                      label="Opening cash (USD)"
+                      label={t('shifts.openingCashUsd')}
                       required
                       id="opening-cash"
                     >
@@ -432,7 +441,7 @@ export default function ShiftsPage() {
                   ) : (
                     <div className="rounded-md border border-border-subtle bg-muted-surface px-4 py-3">
                       <p className="m-0 text-xs font-medium text-text-muted">
-                        Expected cash
+                        {t('shifts.expectedCash')}
                       </p>
                       <strong className="mt-1 block text-lg text-text-main">
                         {money(expectedCash)}
@@ -440,15 +449,15 @@ export default function ShiftsPage() {
                     </div>
                   )}
                   <Button type="submit" className="whitespace-nowrap">
-                    {shift ? 'Review close' : 'Open shift'}
+                    {shift ? t('shifts.reviewClose') : t('shifts.open')}
                   </Button>
                 </form>
               </SectionCard>
 
               {shift && (
                 <SectionCard
-                  title="Cash movement"
-                  description="Add or remove drawer cash."
+                  title={t('shifts.cashMovement')}
+                  description={t('shifts.cashMovementHelp')}
                   icon={
                     movementType === 'CASH_OUT' ? (
                       <BanknoteArrowDown size={20} />
@@ -461,7 +470,7 @@ export default function ShiftsPage() {
                     onSubmit={addMovement}
                     className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2"
                   >
-                    <FormField label="Type">
+                    <FormField label={t('shifts.type')}>
                       <CustomSelect
                         value={movementType}
                         onChange={(value) => {
@@ -470,13 +479,13 @@ export default function ShiftsPage() {
                           setApprovalMessage('');
                         }}
                         options={[
-                          { value: 'CASH_IN', label: 'Cash in' },
-                          { value: 'CASH_OUT', label: 'Cash out' },
+                          { value: 'CASH_IN', label: t('shifts.cashIn') },
+                          { value: 'CASH_OUT', label: t('shifts.cashOut') },
                         ]}
                       />
                     </FormField>
                     <FormField
-                      label="Amount (USD)"
+                      label={t('supplierInvoices.amountUsd')}
                       required
                       id="movement-amount"
                     >
@@ -495,7 +504,7 @@ export default function ShiftsPage() {
                       />
                     </FormField>
                     <FormField
-                      label="Reason"
+                      label={t('shifts.reason')}
                       required
                       id="movement-reason"
                       className="md:col-span-2"
@@ -504,7 +513,7 @@ export default function ShiftsPage() {
                         id="movement-reason"
                         required
                         value={movementReason}
-                        placeholder="e.g. Paid supplier"
+                        placeholder={t('shifts.reasonPlaceholder')}
                         onChange={(event) => {
                           setMovementReason(event.target.value);
                           setCashOutApprovalToken('');
@@ -520,19 +529,19 @@ export default function ShiftsPage() {
                           </span>
                           <div>
                             <h3 className="m-0 text-sm font-bold text-amber-900">
-                              Manager approval required
+                              {t('shifts.managerApproval')}
                             </h3>
                             <p className="mt-1 mb-0 text-xs text-amber-800">
-                              Ask a manager to approve this cash-out.
+                              {t('shifts.managerApprovalHelp')}
                             </p>
                           </div>
                         </div>
                         <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)_auto]">
-                          <FormField label="Manager">
+                          <FormField label={t('staff.role.MANAGER')}>
                             <CustomSelect
                               value={approvalUserId}
                               onChange={setApprovalUserId}
-                              placeholder="Select manager"
+                              placeholder={t('shifts.selectManager')}
                               options={approvers.map((user) => ({
                                 value: user.id,
                                 label: user.firstName + ' ' + user.lastName,
@@ -560,7 +569,7 @@ export default function ShiftsPage() {
                             variant="warningSubtle"
                             onClick={() => void approveCashOut()}
                           >
-                            Approve
+                            {t('shifts.approve')}
                           </Button>
                         </div>
                         {approvalMessage && (
@@ -580,7 +589,7 @@ export default function ShiftsPage() {
                           !cashOutApprovalToken
                         }
                       >
-                        Record movement
+                        {t('shifts.recordMovement')}
                       </Button>
                     </div>
                   </form>
@@ -590,18 +599,18 @@ export default function ShiftsPage() {
 
             {shift && closeOpen && (
               <Modal
-                title="Close shift"
-                description="Enter the counted drawer cash."
+                title={t('shifts.close')}
+                description={t('shifts.closeModalHelp')}
                 density="compact"
                 onClose={closeCloseReview}
                 size="sm"
                 footer={
                   <>
                     <Button variant="secondary" onClick={closeCloseReview}>
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                     <Button type="submit" form="close-shift-form">
-                      Close shift
+                      {t('shifts.close')}
                     </Button>
                   </>
                 }
@@ -613,17 +622,17 @@ export default function ShiftsPage() {
                 >
                   <div className="rounded-md border border-border-subtle bg-muted-surface px-4 py-3">
                     <p className="m-0 text-xs font-medium text-text-muted">
-                      Expected cash
+                      {t('shifts.expectedCash')}
                     </p>
                     <strong className="mt-1 block text-lg text-text-main">
                       {money(expectedCash)}
                     </strong>
                   </div>
                   <FormField
-                    label="Counted cash at closing (USD)"
+                    label={t('shifts.countedCashUsd')}
                     required
                     id="closing-cash"
-                    help="Count all physical notes and coins currently in the drawer."
+                    help={t('shifts.countedCashHelp')}
                   >
                     <Input
                       id="closing-cash"
@@ -645,27 +654,25 @@ export default function ShiftsPage() {
                     (hasCashVariance ? (
                       <AlertBanner
                         tone={cashVariance > 0 ? 'warning' : 'error'}
-                        title={cashVariance > 0 ? 'Cash over' : 'Cash short'}
-                        description={`${money(Math.abs(cashVariance))} ${
-                          cashVariance > 0
-                            ? 'over expected.'
-                            : 'short of expected.'
-                        }`}
+                        title={cashVariance > 0 ? t('shifts.cashOver') : t('shifts.cashShort')}
+                        description={cashVariance > 0
+                          ? t('shifts.overExpected', { amount: money(Math.abs(cashVariance)) })
+                          : t('shifts.shortExpected', { amount: money(Math.abs(cashVariance)) })}
                       />
                     ) : (
                       <AlertBanner
                         tone="success"
-                        title="Drawer balanced"
-                        description="Counted cash matches expected cash."
+                        title={t('shifts.drawerBalanced')}
+                        description={t('shifts.drawerBalancedHelp')}
                       />
                     ))}
 
                   {(hasCashVariance || needsVarianceReason) && (
                     <FormField
-                      label="Reason for cash variance"
+                      label={t('shifts.varianceReason')}
                       required
                       id="variance-reason"
-                      help="Explain the difference for the shift record."
+                      help={t('shifts.varianceHelp')}
                     >
                       <Input
                         id="variance-reason"
@@ -674,7 +681,7 @@ export default function ShiftsPage() {
                         onChange={(event) =>
                           setVarianceReason(event.target.value)
                         }
-                        placeholder="e.g. Wrong change given"
+                        placeholder={t('shifts.variancePlaceholder')}
                       />
                     </FormField>
                   )}
@@ -684,7 +691,7 @@ export default function ShiftsPage() {
 
             {shift && (
               <SectionCard
-                title="Current shift movements"
+                title={t('shifts.currentMovements')}
                 icon={<CircleDollarSign size={20} />}
                 bodyPadding={false}
               >
@@ -701,7 +708,7 @@ export default function ShiftsPage() {
                           </strong>
                           <span className="mt-1 block text-xs text-text-muted">
                             {new Date(movement.createdAt).toLocaleTimeString(
-                              [],
+                              locale === 'km' ? 'km-KH' : 'en-US',
                               {
                                 hour: 'numeric',
                                 minute: '2-digit',
@@ -725,8 +732,8 @@ export default function ShiftsPage() {
                   </div>
                 ) : (
                   <EmptyState
-                    title="No cash movements"
-                    description="Drawer cash changes will appear here."
+                    title={t('shifts.noMovements')}
+                    description={t('shifts.noMovementsHelp')}
                     icon={<CircleDollarSign size={24} />}
                   />
                 )}
@@ -734,13 +741,8 @@ export default function ShiftsPage() {
             )}
 
             <SectionCard
-              title="Shift history"
-              description={
-                historyTotal +
-                ' closed' +
-                (historyTotal === 1 ? '' : 's') +
-                '.'
-              }
+              title={t('shifts.history')}
+              description={t('shifts.closedCount', { count: historyTotal })}
               icon={<ClipboardCheck size={20} />}
               headerClassName="max-sm:flex-wrap"
               actionsClassName="max-sm:w-full max-sm:basis-full"
@@ -751,7 +753,7 @@ export default function ShiftsPage() {
                     setHistorySearch(event.target.value);
                     setHistoryPage(1);
                   }}
-                  placeholder="Search branch or variance"
+                  placeholder={t('shifts.search')}
                   prefixIcon={<Search size={15} />}
                   wrapperClassName="w-full sm:w-80"
                 />
@@ -764,13 +766,13 @@ export default function ShiftsPage() {
                     <thead>
                       <tr className="border-b border-border-subtle bg-muted-surface">
                         {[
-                          'Branch',
-                          'Opened',
-                          'Closed',
-                          'Opening',
-                          'Closing',
-                          'Variance reason',
-                          'Movements',
+                          t('entity.branch'),
+                          t('shifts.opened'),
+                          t('shifts.closed'),
+                          t('shifts.opening'),
+                          t('shifts.closing'),
+                          t('shifts.varianceReason'),
+                          t('shifts.movements'),
                         ].map((heading) => (
                           <th
                             key={heading}
@@ -792,12 +794,12 @@ export default function ShiftsPage() {
                           </td>
                           <td className="px-4 py-4 text-text-secondary">
                             {item.openedAt
-                              ? new Date(item.openedAt).toLocaleString()
+                              ? new Date(item.openedAt).toLocaleString(locale === 'km' ? 'km-KH' : 'en-US')
                               : '—'}
                           </td>
                           <td className="px-4 py-4 text-text-secondary">
                             {item.closedAt
-                              ? new Date(item.closedAt).toLocaleString()
+                              ? new Date(item.closedAt).toLocaleString(locale === 'km' ? 'km-KH' : 'en-US')
                               : '—'}
                           </td>
                           <td className="px-4 py-4 font-semibold tabular-nums text-text-main">
@@ -827,8 +829,8 @@ export default function ShiftsPage() {
                 </div>
               ) : (
                 <EmptyState
-                  title="No closed shifts"
-                  description="Closed shift records will appear here."
+                  title={t('shifts.noClosed')}
+                  description={t('shifts.noClosedHelp')}
                   icon={<ClipboardCheck size={24} />}
                 />
               )}
@@ -837,7 +839,7 @@ export default function ShiftsPage() {
                   <Button
                     variant="secondary"
                     size="icon"
-                    aria-label="Previous page"
+                    aria-label={t('receiving.previousPage')}
                     disabled={historyPage === 1}
                     onClick={() => setHistoryPage((page) => page - 1)}
                     className="size-8"
@@ -845,12 +847,12 @@ export default function ShiftsPage() {
                     <ChevronLeft size={17} />
                   </Button>
                   <span className="text-xs font-semibold text-text-muted">
-                    Page {historyPage} of {pageCount}
+                    {t('purchaseOrders.pageCount', { page: historyPage, pages: pageCount })}
                   </span>
                   <Button
                     variant="secondary"
                     size="icon"
-                    aria-label="Next page"
+                    aria-label={t('receiving.nextPage')}
                     disabled={historyPage >= pageCount}
                     onClick={() => setHistoryPage((page) => page + 1)}
                     className="size-8"

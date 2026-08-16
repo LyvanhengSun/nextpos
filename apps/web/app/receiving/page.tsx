@@ -22,6 +22,7 @@ import {
   SectionCard,
 } from '../../components/ui/';
 import { PageContainer } from '../../components/layout/page-container';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 type Product = {
@@ -57,21 +58,22 @@ function TablePager({
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }) {
+  const { t } = useI18n();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = total ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, total);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-4 py-3 sm:px-8">
       <span className="text-xs text-text-muted">
-        Showing{' '}
+        {t('purchaseOrders.showing')}{' '}
         <strong className="font-bold text-text-secondary">
           {start}–{end}
         </strong>{' '}
-        of <strong className="font-bold text-text-secondary">{total}</strong>
+        {t('purchaseOrders.of')} <strong className="font-bold text-text-secondary">{total}</strong>
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 text-xs text-text-muted">
-          <span>Rows</span>
+          <span>{t('purchaseOrders.rows')}</span>
           <CustomSelect
             value={String(pageSize)}
             onChange={(value) => onPageSizeChange(Number(value))}
@@ -83,10 +85,10 @@ function TablePager({
           />
         </div>
         <span className="text-xs text-text-muted">
-          Page {page} of {totalPages}
+          {t('purchaseOrders.pageCount', { page, pages: totalPages })}
         </span>
         <Button
-          aria-label="Previous page"
+          aria-label={t('receiving.previousPage')}
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
           variant="secondary"
@@ -96,7 +98,7 @@ function TablePager({
           <ChevronLeft size={16} />
         </Button>
         <Button
-          aria-label="Next page"
+          aria-label={t('receiving.nextPage')}
           disabled={page === totalPages}
           onClick={() => onPageChange(page + 1)}
           variant="secondary"
@@ -111,6 +113,7 @@ function TablePager({
 }
 
 export default function ReceivingPage() {
+  const { t, locale } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -139,7 +142,7 @@ export default function ReceivingPage() {
         fetch(`${api}/inventory/receipts`, { headers }),
       ]);
     if (!productResponse.ok || !supplierResponse.ok || !receiptResponse.ok)
-      throw new Error('Please sign in again.');
+      throw new Error(t('receiving.error.signIn'));
     setProducts(await productResponse.json());
     setSuppliers(await supplierResponse.json());
     setReceipts(await receiptResponse.json());
@@ -158,15 +161,15 @@ export default function ReceivingPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to create supplier.');
+        setMessage(data.message ?? t('receiving.error.createSupplier'));
         return;
       }
       formElement.reset();
       setShowSupplierForm(false);
-      setMessage(`${data.name} was added to suppliers.`);
+      setMessage(t('receiving.success.supplierAdded', { name: data.name }));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('receiving.error.api'));
     }
   }
   async function receive(event: FormEvent<HTMLFormElement>) {
@@ -192,19 +195,19 @@ export default function ReceivingPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to receive stock.');
+        setMessage(data.message ?? t('receiving.error.receive'));
         return;
       }
       formElement.reset();
       setSupplierId('');
       setStockTarget('');
       setMessage(
-        'Delivery received. Branch stock and cost history were updated.',
+        t('receiving.success.received'),
       );
       await load();
     } catch {
       setMessage(
-        'The API server did not return a response. Confirm it is running, then try again.',
+        t('receiving.error.apiRetry'),
       );
     }
   }
@@ -237,7 +240,7 @@ export default function ReceivingPage() {
         ],
   );
   const supplierOptions = [
-    { value: '', label: 'Unknown / no supplier' },
+    { value: '', label: t('receiving.unknownSupplier') },
     ...suppliers.map((supplier) => ({
       value: supplier.id,
       label: supplier.name,
@@ -248,8 +251,8 @@ export default function ReceivingPage() {
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Inventory"
-        title="Stock receiving"
+        eyebrow={t('receiving.eyebrow')}
+        title={t('receiving.title')}
         className="page-heading-full-bleed"
       />
 
@@ -258,8 +261,8 @@ export default function ReceivingPage() {
 
         <section className="mb-6 grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(270px,1fr)]">
           <SectionCard
-            title="Receive delivery"
-            description="Add each product or variant received."
+            title={t('receiving.receiveDelivery')}
+            description={t('receiving.receiveHelp')}
             icon={<Truck size={20} />}
             className="h-full"
           >
@@ -268,7 +271,7 @@ export default function ReceivingPage() {
               autoComplete="off"
               className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2"
             >
-              <FormField label="Supplier" id="supplierId">
+              <FormField label={t('entity.supplier')} id="supplierId">
                 <CustomSelect
                   name="supplierId"
                   value={supplierId}
@@ -277,7 +280,7 @@ export default function ReceivingPage() {
                 />
               </FormField>
               <FormField
-                label="Product or exact variant"
+                label={t('purchaseOrders.productOrVariant')}
                 id="stockTarget"
                 required
               >
@@ -286,10 +289,10 @@ export default function ReceivingPage() {
                   value={stockTarget}
                   onChange={setStockTarget}
                   options={stockOptions}
-                  placeholder="Select product or variant"
+                  placeholder={t('receiving.selectProduct')}
                 />
               </FormField>
-              <FormField label="Quantity received" id="quantity" required>
+              <FormField label={t('receiving.quantityReceived')} id="quantity" required>
                 <Input
                   required
                   id="quantity"
@@ -297,13 +300,13 @@ export default function ReceivingPage() {
                   min="1"
                   step="1"
                   type="number"
-                  placeholder="e.g. 50"
+                  placeholder={t('receiving.quantityPlaceholder')}
                 />
               </FormField>
               <FormField
-                label="Unit cost (USD)"
+                label={t('purchaseOrders.unitCostUsd')}
                 id="unitCost"
-                sublabel="(optional)"
+                sublabel={t('common.optional')}
               >
                 <Input
                   id="unitCost"
@@ -312,49 +315,49 @@ export default function ReceivingPage() {
                   step="0.01"
                   type="number"
                   prefixText="$"
-                  placeholder="e.g. 1.25"
+                  placeholder={t('receiving.costPlaceholder')}
                 />
               </FormField>
               <FormField
-                label="Supplier invoice / reference"
+                label={t('receiving.invoiceReference')}
                 id="reference"
-                sublabel="(optional)"
+                sublabel={t('common.optional')}
                 className="md:col-span-2"
               >
                 <Input
                   id="reference"
                   name="reference"
-                  placeholder="e.g. INV-2026-001"
+                  placeholder={t('receiving.referencePlaceholder')}
                 />
               </FormField>
               <FormField
-                label="Note"
+                label={t('purchaseOrders.note')}
                 id="note"
-                sublabel="(optional)"
+                sublabel={t('common.optional')}
                 className="md:col-span-2"
               >
                 <Input
                   id="note"
                   name="note"
-                  placeholder="e.g. Morning delivery"
+                  placeholder={t('receiving.notePlaceholder')}
                 />
               </FormField>
               <div className="flex justify-end md:col-span-2">
                 <Button type="submit">
-                  <PackageCheck size={16} /> Receive stock
+                  <PackageCheck size={16} /> {t('receiving.receiveStock')}
                 </Button>
               </div>
             </form>
           </SectionCard>
 
           <SectionCard
-            title="Suppliers"
-            description={`${suppliers.length} available`}
+            title={t('entity.suppliers')}
+            description={t('receiving.supplierCount', { count: suppliers.length })}
             actions={
               <Button
                 variant="secondary"
                 size="icon"
-                aria-label="Add supplier"
+                aria-label={t('supplierPage.add')}
                 onClick={() => setShowSupplierForm((current) => !current)}
               >
                 <Plus size={18} />
@@ -368,32 +371,32 @@ export default function ReceivingPage() {
                 autoComplete="off"
                 className="flex flex-col gap-4"
               >
-                <FormField label="Supplier name" id="supplierName" required>
+                <FormField label={t('supplierPage.name')} id="supplierName" required>
                   <Input
                     required
                     id="supplierName"
                     name="name"
-                    placeholder="Coffee supplier"
+                    placeholder={t('receiving.supplierPlaceholder')}
                   />
                 </FormField>
                 <FormField
-                  label="Phone"
+                  label={t('customers.phone')}
                   id="supplierPhone"
-                  sublabel="(optional)"
+                  sublabel={t('common.optional')}
                 >
                   <Input id="supplierPhone" name="phone" />
                 </FormField>
                 <FormField
-                  label="Email"
+                  label={t('auth.email')}
                   id="supplierEmail"
-                  sublabel="(optional)"
+                  sublabel={t('common.optional')}
                 >
                   <Input id="supplierEmail" name="email" type="email" />
                 </FormField>
                 <FormField
-                  label="Address"
+                  label={t('branches.address')}
                   id="supplierAddress"
-                  sublabel="(optional)"
+                  sublabel={t('common.optional')}
                 >
                   <Input id="supplierAddress" name="address" />
                 </FormField>
@@ -402,9 +405,9 @@ export default function ReceivingPage() {
                     variant="secondary"
                     onClick={() => setShowSupplierForm(false)}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
-                  <Button type="submit">Add supplier</Button>
+                  <Button type="submit">{t('supplierPage.add')}</Button>
                 </div>
               </form>
             ) : suppliers.length ? (
@@ -425,8 +428,8 @@ export default function ReceivingPage() {
               </ul>
             ) : (
               <EmptyState
-                title="No suppliers yet"
-                description="Add a supplier to record deliveries."
+                title={t('supplierPage.empty')}
+                description={t('receiving.noSuppliersHelp')}
                 icon={<Users size={24} />}
               />
             )}
@@ -434,8 +437,8 @@ export default function ReceivingPage() {
         </section>
 
         <SectionCard
-          title="Recent deliveries"
-          description={`${receiptResults.length} of ${receipts.length} delivery record${receipts.length === 1 ? '' : 's'}.`}
+          title={t('receiving.recentDeliveries')}
+          description={t('receiving.deliveryCount', { shown: receiptResults.length, total: receipts.length })}
           bodyPadding={false}
         >
           <div className="border-b border-border-subtle px-4 py-4 sm:px-8">
@@ -445,7 +448,7 @@ export default function ReceivingPage() {
                 setQuery(event.target.value);
                 setPage(1);
               }}
-              placeholder="Search product, supplier, or reference"
+              placeholder={t('receiving.search')}
               prefixIcon={<Search size={16} />}
               className="max-w-md"
             />
@@ -457,12 +460,12 @@ export default function ReceivingPage() {
                   <thead className="border-b border-border-subtle bg-muted-surface">
                     <tr>
                       {[
-                        'Received',
-                        'Product',
-                        'Supplier',
-                        'Quantity',
-                        'Unit cost',
-                        'Reference',
+                        t('suppliers.received'),
+                        t('entity.product'),
+                        t('entity.supplier'),
+                        t('suppliers.quantity'),
+                        t('suppliers.unitCost'),
+                        t('suppliers.reference'),
                       ].map((heading) => (
                         <th
                           key={heading}
@@ -481,7 +484,7 @@ export default function ReceivingPage() {
                       >
                         <td className="whitespace-nowrap px-4 py-3 text-xs text-text-muted">
                           {new Date(receipt.createdAt).toLocaleString(
-                            undefined,
+                            locale === 'km' ? 'km-KH' : 'en-US',
                             {
                               dateStyle: 'medium',
                               timeStyle: 'short',
@@ -534,8 +537,8 @@ export default function ReceivingPage() {
             </>
           ) : (
             <EmptyState
-              title="No deliveries found"
-              description="Try a different product, supplier, or reference."
+              title={t('receiving.empty')}
+              description={t('receiving.emptyHelp')}
               icon={<Calendar size={24} />}
             />
           )}

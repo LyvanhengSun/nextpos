@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { useI18n } from '../../lib/i18n';
 
 export type SelectOption = {
   value: string;
@@ -31,7 +32,7 @@ export function CustomSelect({
   value,
   onChange,
   options,
-  placeholder = 'Select option...',
+  placeholder,
   disabled = false,
   style,
   className = '',
@@ -40,6 +41,8 @@ export function CustomSelect({
   onOpenChange,
   placement = 'bottom',
 }: CustomSelectProps) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t('common.selectOption');
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = open ?? internalOpen;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,7 +93,7 @@ export function CustomSelect({
             </span>
           )}
           <span className="truncate">
-            {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption ? selectedOption.label : resolvedPlaceholder}
           </span>
         </span>
         <ChevronDown

@@ -11,6 +11,7 @@ import {
   SectionCard,
 } from '../../../components/ui/';
 import { PageContainer } from '../../../components/layout/page-container';
+import { useI18n } from '../../../lib/i18n';
 
 const api = '/api';
 type Detail = {
@@ -66,6 +67,7 @@ const money = (value: number) => `$${(value / 100).toFixed(2)}`;
 
 export default function SupplierDetailPage() {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const { supplierId } = useParams<{ supplierId: string }>();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [message, setMessage] = useState('');
@@ -82,17 +84,17 @@ export default function SupplierDetailPage() {
       .then(async (response) => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok)
-          throw new Error(data.message ?? 'Unable to load supplier.');
+          throw new Error(data.message ?? t('supplierDetail.error.load'));
         setDetail(data);
       })
       .catch((error: Error) => setMessage(error.message));
-  }, [supplierId]);
+  }, [supplierId, t, token]);
   if (message)
     return (
       <main className="app-page">
         <PageHeading
-          eyebrow="Supplier detail"
-          title="Supplier unavailable"
+          eyebrow={t('supplierDetail.eyebrow')}
+          title={t('supplierDetail.unavailable')}
           actions={
             <Button
               type="button"
@@ -101,7 +103,7 @@ export default function SupplierDetailPage() {
               size="sm"
             >
               <ArrowLeft size={16} />
-              Suppliers
+              {t('entity.suppliers')}
             </Button>
           }
         />
@@ -115,11 +117,14 @@ export default function SupplierDetailPage() {
   if (!detail)
     return (
       <main className="app-page">
-        <PageHeading eyebrow="Supplier detail" title="Loading supplier" />
+        <PageHeading
+          eyebrow={t('supplierDetail.eyebrow')}
+          title={t('supplierDetail.loading')}
+        />
         <div>
           <PageContainer>
             <section className="rounded-lg border border-border-subtle bg-card shadow-sm">
-              <EmptyState title="Loading supplier…" />
+              <EmptyState title={t('supplierDetail.loadingProgress')} />
             </section>
           </PageContainer>
         </div>
@@ -135,10 +140,22 @@ export default function SupplierDetailPage() {
       ),
     0,
   );
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US');
+  const orderStatus = (status: string) => {
+    const labels: Record<string, string> = {
+      DRAFT: t('supplierDetail.status.draft'),
+      ORDERED: t('supplierDetail.status.ordered'),
+      PARTIALLY_RECEIVED: t('supplierDetail.status.partiallyReceived'),
+      RECEIVED: t('supplierDetail.status.received'),
+      CANCELLED: t('supplierDetail.status.cancelled'),
+    };
+    return labels[status] ?? status.replace(/_/g, ' ');
+  };
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Supplier detail"
+        eyebrow={t('supplierDetail.eyebrow')}
         title={detail.supplier.name}
         actions={
           <Button
@@ -148,7 +165,7 @@ export default function SupplierDetailPage() {
             size="sm"
           >
             <ArrowLeft size={16} />
-            Suppliers
+            {t('entity.suppliers')}
           </Button>
         }
       />
@@ -158,17 +175,17 @@ export default function SupplierDetailPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {[
                 {
-                  label: 'Linked products',
+                  label: t('supplierDetail.linkedProducts'),
                   value: String(detail.catalogItems.length),
                   icon: Package,
                 },
                 {
-                  label: 'Open invoice balance',
+                  label: t('supplierDetail.openInvoiceBalance'),
                   value: money(openBalance),
                   icon: ReceiptText,
                 },
                 {
-                  label: 'Recent receipts',
+                  label: t('supplierDetail.recentReceipts'),
                   value: String(detail.receipts.length),
                   icon: ShoppingCart,
                 },
@@ -193,7 +210,7 @@ export default function SupplierDetailPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-              <SectionCard title="Received cost history" bodyPadding={false}>
+              <SectionCard title={t('supplierDetail.receivedCostHistory')} bodyPadding={false}>
                 {detail.receipts.length ? (
                   <div>
                     {detail.receipts.map((receipt) => (
@@ -209,8 +226,8 @@ export default function SupplierDetailPage() {
                               : ''}
                           </strong>
                           <p className="mt-1 mb-0 text-xs text-text-muted">
-                            {new Date(receipt.createdAt).toLocaleDateString()} ·{' '}
-                            {receipt.reference || 'No reference'}
+                            {formatDate(receipt.createdAt)} ·{' '}
+                            {receipt.reference || t('supplierDetail.noReference')}
                           </p>
                         </div>
                         <div className="shrink-0 text-sm font-bold text-text-main">
@@ -223,11 +240,11 @@ export default function SupplierDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState title="No supplier receipts yet." />
+                  <EmptyState title={t('supplierDetail.noReceipts')} />
                 )}
               </SectionCard>
 
-              <SectionCard title="Purchase orders" bodyPadding={false}>
+              <SectionCard title={t('supplierDetail.purchaseOrders')} bodyPadding={false}>
                 {detail.purchaseOrders.length ? (
                   <div>
                     {detail.purchaseOrders.map((order) => (
@@ -237,26 +254,25 @@ export default function SupplierDetailPage() {
                       >
                         <div>
                           <strong className="text-sm font-bold text-text-main">
-                            {order.reference || 'No reference'}
+                            {order.reference || t('supplierDetail.noReference')}
                           </strong>
                           <p className="mt-1 mb-0 text-xs text-text-muted">
-                            {new Date(order.createdAt).toLocaleDateString()} ·{' '}
-                            {order.items.length} item
-                            {order.items.length === 1 ? '' : 's'}
+                            {formatDate(order.createdAt)} ·{' '}
+                            {t('supplierDetail.itemCount', { count: order.items.length })}
                           </p>
                         </div>
                         <span className="shrink-0 rounded-full border border-border-subtle bg-muted-surface px-2 py-1 text-xs font-bold text-text-secondary">
-                          {order.status.replace(/_/g, ' ')}
+                          {orderStatus(order.status)}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <EmptyState title="No purchase orders yet." />
+                  <EmptyState title={t('supplierDetail.noPurchaseOrders')} />
                 )}
               </SectionCard>
 
-              <SectionCard title="Linked products" bodyPadding={false}>
+              <SectionCard title={t('supplierDetail.linkedProducts')} bodyPadding={false}>
                 {detail.catalogItems.length ? (
                   <div>
                     {detail.catalogItems.map((item) => (
@@ -267,7 +283,9 @@ export default function SupplierDetailPage() {
                         <span className="text-sm font-bold text-text-main">
                           {item.product.name}
                           {item.variant ? ` · ${item.variant.name}` : ''}
-                          {item.isPreferred ? ' · Preferred' : ''}
+                          {item.isPreferred
+                            ? ` · ${t('suppliers.preferred')}`
+                            : ''}
                         </span>
                         <strong className="shrink-0 text-sm font-bold text-text-main">
                           {item.lastCost === null ? '—' : money(item.lastCost)}
@@ -276,11 +294,11 @@ export default function SupplierDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState title="No linked products yet." />
+                  <EmptyState title={t('supplierDetail.noLinkedProducts')} />
                 )}
               </SectionCard>
 
-              <SectionCard title="Invoices" bodyPadding={false}>
+              <SectionCard title={t('supplierDetail.invoices')} bodyPadding={false}>
                 {detail.invoices.length ? (
                   <div>
                     {detail.invoices.map((invoice) => {
@@ -299,8 +317,10 @@ export default function SupplierDetailPage() {
                             {invoice.invoiceNumber}
                             <small className="mt-1 block text-xs font-normal text-text-muted">
                               {invoice.dueDate
-                                ? `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
-                                : 'No due date'}
+                                ? t('supplierDetail.due', {
+                                    date: formatDate(invoice.dueDate),
+                                  })
+                                : t('supplierDetail.noDueDate')}
                             </small>
                           </span>
                           <strong
@@ -317,7 +337,7 @@ export default function SupplierDetailPage() {
                     })}
                   </div>
                 ) : (
-                  <EmptyState title="No invoices yet." />
+                  <EmptyState title={t('supplierDetail.noInvoices')} />
                 )}
               </SectionCard>
             </div>

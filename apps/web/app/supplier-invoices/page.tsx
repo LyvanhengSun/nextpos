@@ -27,6 +27,7 @@ import {
   StatusBadge,
   SummaryMetricCard,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 type Supplier = { id: string; name: string };
@@ -83,21 +84,22 @@ function TablePager({
   onPageChange: (value: number) => void;
   onPageSizeChange: (value: number) => void;
 }) {
+  const { t } = useI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const start = total ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, total);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-4 py-3 sm:px-8">
       <span className="text-xs text-text-muted">
-        Showing{' '}
+        {t('purchaseOrders.showing')}{' '}
         <strong className="font-bold text-text-secondary">
           {start}–{end}
         </strong>{' '}
-        of <strong className="font-bold text-text-secondary">{total}</strong>
+        {t('purchaseOrders.of')} <strong className="font-bold text-text-secondary">{total}</strong>
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 text-xs text-text-muted">
-          <span>Rows</span>
+          <span>{t('purchaseOrders.rows')}</span>
           <CustomSelect
             value={String(pageSize)}
             onChange={(value) => onPageSizeChange(Number(value))}
@@ -109,10 +111,10 @@ function TablePager({
           />
         </div>
         <span className="text-xs text-text-muted">
-          Page {page} of {pages}
+          {t('purchaseOrders.pageCount', { page, pages })}
         </span>
         <Button
-          aria-label="Previous page"
+          aria-label={t('receiving.previousPage')}
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
           variant="secondary"
@@ -122,7 +124,7 @@ function TablePager({
           <ChevronLeft size={16} />
         </Button>
         <Button
-          aria-label="Next page"
+          aria-label={t('receiving.nextPage')}
           disabled={page === pages}
           onClick={() => onPageChange(page + 1)}
           variant="secondary"
@@ -137,6 +139,7 @@ function TablePager({
 }
 
 export default function SupplierInvoicesPage() {
+  const { t, locale } = useI18n();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -186,7 +189,7 @@ export default function SupplierInvoicesPage() {
           fetch(`${api}/supplier-invoices`, { headers }),
         ]);
       if (!supplierResponse.ok || !orderResponse.ok || !invoiceResponse.ok) {
-        throw new Error('Please sign in as Owner or Manager.');
+        throw new Error(t('supplierInvoices.error.signIn'));
       }
 
       const supplierData = await supplierResponse.json().catch(() => []);
@@ -207,7 +210,7 @@ export default function SupplierInvoicesPage() {
     const element = event.currentTarget;
     const form = Object.fromEntries(new FormData(element));
     if (!form.supplierId) {
-      showMessage('Select a supplier.', 'error');
+      showMessage(t('supplierInvoices.error.selectSupplier'), 'error');
       return;
     }
     setIsSavingInvoice(true);
@@ -223,17 +226,17 @@ export default function SupplierInvoicesPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        showMessage(data.message ?? 'Unable to record invoice.', 'error');
+        showMessage(data.message ?? t('supplierInvoices.error.recordInvoice'), 'error');
         return;
       }
       element.reset();
       setSupplierId('');
       setPurchaseOrderId('');
       setDueDate('');
-      showMessage('Supplier invoice recorded as unpaid.', 'success');
+      showMessage(t('supplierInvoices.success.invoiceRecorded'), 'success');
       await load();
     } catch {
-      showMessage('The API server did not return a response.', 'error');
+      showMessage(t('receiving.error.api'), 'error');
     } finally {
       setIsSavingInvoice(false);
     }
@@ -257,16 +260,16 @@ export default function SupplierInvoicesPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        showMessage(data.message ?? 'Unable to record payment.', 'error');
+        showMessage(data.message ?? t('supplierInvoices.error.recordPayment'), 'error');
         return;
       }
       setPaymentInvoice(null);
       setAmount('');
       setPaymentMethod('CASH');
-      showMessage('Supplier payment recorded.', 'success');
+      showMessage(t('supplierInvoices.success.paymentRecorded'), 'success');
       await load();
     } catch {
-      showMessage('The API server did not return a response.', 'error');
+      showMessage(t('receiving.error.api'), 'error');
     } finally {
       setIsSavingPayment(false);
     }
@@ -299,24 +302,24 @@ export default function SupplierInvoicesPage() {
         showMessage(
           data.message ??
             (isCredit
-              ? 'Unable to record credit note.'
-              : 'Unable to update invoice dispute.'),
+              ? t('supplierInvoices.error.recordCredit')
+              : t('supplierInvoices.error.updateDispute')),
           'error',
         );
         return;
       }
       showMessage(
         isCredit
-          ? 'Supplier credit note recorded.'
+          ? t('supplierInvoices.success.creditRecorded')
           : invoiceAction.mode === 'resolve'
-            ? 'Supplier dispute resolved.'
-            : 'Supplier dispute opened; payment is now held.',
+            ? t('supplierInvoices.success.disputeResolved')
+            : t('supplierInvoices.success.disputeOpened'),
         'success',
       );
       setInvoiceAction(null);
       await load();
     } catch {
-      showMessage('The API server did not return a response.', 'error');
+      showMessage(t('receiving.error.api'), 'error');
     } finally {
       setIsSavingAction(false);
     }
@@ -364,12 +367,12 @@ export default function SupplierInvoicesPage() {
       balance > 0 && invoice.dueDate && new Date(invoice.dueDate) < now;
     const status: ['success' | 'danger' | 'info' | 'warning', string] =
       balance === 0
-        ? ['success', 'Paid']
+        ? ['success', t('supplierInvoices.paid')]
         : isOverdue
-          ? ['danger', 'Overdue']
+          ? ['danger', t('supplierInvoices.overdue')]
           : invoice.status === 'PARTIALLY_PAID'
-            ? ['info', 'Partially paid']
-            : ['warning', 'Unpaid'];
+            ? ['info', t('supplierInvoices.partiallyPaid')]
+            : ['warning', t('supplierInvoices.unpaid')];
     return <StatusBadge tone={status[0]}>{status[1]}</StatusBadge>;
   };
   const supplierOptions = suppliers.map((supplier) => ({
@@ -377,22 +380,22 @@ export default function SupplierInvoicesPage() {
     label: supplier.name,
   }));
   const orderOptions = [
-    { value: '', label: 'Not linked to a purchase order' },
+    { value: '', label: t('supplierInvoices.notLinked') },
     ...orders.map((order) => ({
       value: order.id,
-      label: order.reference ?? `Order ${order.id.slice(-6)}`,
-      sublabel: `${order.supplier.name} · ${order.status.replace(/_/g, ' ')}`,
+      label: order.reference ?? t('supplierInvoices.orderNamed', { id: order.id.slice(-6) }),
+      sublabel: `${order.supplier.name} · ${t(`purchaseOrders.status.${order.status}` as Parameters<typeof t>[0])}`,
     })),
   ];
   const paymentMethodOptions = [
-    { value: 'CASH', label: 'Cash' },
-    { value: 'BANK', label: 'Bank transfer' },
-    { value: 'CARD', label: 'Card' },
+    { value: 'CASH', label: t('supplierInvoices.cash') },
+    { value: 'BANK', label: t('supplierInvoices.bankTransfer') },
+    { value: 'CARD', label: t('supplierInvoices.card') },
     { value: 'KHQR', label: 'KHQR' },
   ];
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Supplier accounts" title="Supplier invoices" />
+      <PageHeading eyebrow={t('supplierInvoices.eyebrow')} title={t('supplierInvoices.title')} />
 
       <div>
         <PageContainer>
@@ -414,23 +417,23 @@ export default function SupplierInvoicesPage() {
 
           <section className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
             <SummaryMetricCard
-              title="Outstanding balance"
+              title={t('supplierInvoices.outstandingBalance')}
               value={money(outstanding)}
-              description="Unpaid"
+              description={t('supplierInvoices.unpaid')}
               icon={<CircleDollarSign size={20} />}
               tone="amber"
             />
             <SummaryMetricCard
-              title="Overdue balance"
+              title={t('supplierInvoices.overdueBalance')}
               value={money(overdue)}
-              description="Overdue"
+              description={t('supplierInvoices.overdue')}
               icon={<FileText size={20} />}
               tone="rose"
             />
             <SummaryMetricCard
-              title="Payments recorded"
+              title={t('supplierInvoices.paymentsRecorded')}
               value={money(paidThisList)}
-              description="Paid"
+              description={t('supplierInvoices.paid')}
               icon={<WalletCards size={20} />}
               tone="sky"
             />
@@ -438,8 +441,8 @@ export default function SupplierInvoicesPage() {
 
           <section className="mb-6 grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(17rem,1fr)]">
             <SectionCard
-              title="Record invoice"
-              description="Add bill."
+              title={t('supplierInvoices.recordInvoice')}
+              description={t('supplierInvoices.recordInvoiceHelp')}
               icon={<FileText size={20} />}
               className="h-full"
             >
@@ -448,24 +451,24 @@ export default function SupplierInvoicesPage() {
                 autoComplete="off"
                 className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2"
               >
-                <FormField label="Supplier" id="supplierId" required>
+                <FormField label={t('entity.supplier')} id="supplierId" required>
                   <CustomSelect
                     name="supplierId"
                     value={supplierId}
                     onChange={setSupplierId}
                     options={supplierOptions}
-                    placeholder="Select supplier"
+                    placeholder={t('purchaseOrders.selectSupplier')}
                   />
                 </FormField>
-                <FormField label="Invoice number" id="invoiceNumber" required>
+                <FormField label={t('supplierInvoices.invoiceNumber')} id="invoiceNumber" required>
                   <Input
                     required
                     id="invoiceNumber"
                     name="invoiceNumber"
-                    placeholder="e.g. INV-2026-001"
+                    placeholder={t('receiving.referencePlaceholder')}
                   />
                 </FormField>
-                <FormField label="Total (USD)" id="invoiceTotal" required>
+                <FormField label={t('supplierInvoices.totalUsd')} id="invoiceTotal" required>
                   <Input
                     required
                     id="invoiceTotal"
@@ -477,19 +480,19 @@ export default function SupplierInvoicesPage() {
                     placeholder="0.00"
                   />
                 </FormField>
-                <FormField label="Due date" id="dueDate" sublabel="(optional)">
+                <FormField label={t('supplierInvoices.dueDate')} id="dueDate" sublabel={t('common.optional')}>
                   <DatePicker
                     id="dueDate"
                     name="dueDate"
                     value={dueDate}
                     onChange={setDueDate}
-                    placeholder="Select due date"
+                    placeholder={t('supplierInvoices.selectDueDate')}
                   />
                 </FormField>
                 <FormField
-                  label="Purchase order"
+                  label={t('dashboard.purchaseOrder')}
                   id="purchaseOrderId"
-                  sublabel="(optional)"
+                  sublabel={t('common.optional')}
                   className="md:col-span-2"
                 >
                   <CustomSelect
@@ -497,41 +500,41 @@ export default function SupplierInvoicesPage() {
                     value={purchaseOrderId}
                     onChange={setPurchaseOrderId}
                     options={orderOptions}
-                    placeholder="Not linked to a purchase order"
+                    placeholder={t('supplierInvoices.notLinked')}
                   />
                 </FormField>
                 <FormField
-                  label="Note"
+                  label={t('purchaseOrders.note')}
                   id="invoiceNote"
-                  sublabel="(optional)"
+                  sublabel={t('common.optional')}
                   className="md:col-span-2"
                 >
                   <Input
                     id="invoiceNote"
                     name="note"
-                    placeholder="e.g. Payment terms: 30 days"
+                    placeholder={t('supplierInvoices.notePlaceholder')}
                   />
                 </FormField>
                 <div className="flex justify-end border-t border-border-subtle pt-5 md:col-span-2">
                   <Button type="submit" disabled={isSavingInvoice}>
                     <Plus size={16} />
-                    {isSavingInvoice ? 'Recording…' : 'Record invoice'}
+                    {isSavingInvoice ? t('supplierInvoices.recording') : t('supplierInvoices.recordInvoice')}
                   </Button>
                 </div>
               </form>
             </SectionCard>
 
             <SectionCard
-              title="Payment flow"
-              description="Payment steps."
+              title={t('supplierInvoices.paymentFlow')}
+              description={t('supplierInvoices.paymentSteps')}
               icon={<WalletCards size={20} />}
               className="h-full"
             >
               <div className="flex flex-col gap-5">
                 {[
-                  ['1', 'Record invoice', 'Add total and due date.'],
-                  ['2', 'Pay invoice', 'Record payment.'],
-                  ['3', 'Review balance', 'Updated automatically.'],
+                  ['1', t('supplierInvoices.recordInvoice'), t('supplierInvoices.stepRecordHelp')],
+                  ['2', t('supplierInvoices.payInvoice'), t('supplierInvoices.stepPayHelp')],
+                  ['3', t('supplierInvoices.reviewBalance'), t('supplierInvoices.stepReviewHelp')],
                 ].map(([number, title, text]) => (
                   <div key={number} className="flex gap-3">
                     <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-extrabold text-brand">
@@ -552,8 +555,8 @@ export default function SupplierInvoicesPage() {
           </section>
 
           <SectionCard
-            title="Invoice balances"
-            description={`${filtered.length} of ${invoices.length} invoices`}
+            title={t('supplierInvoices.invoiceBalances')}
+            description={t('supplierInvoices.invoiceCount', { shown: filtered.length, total: invoices.length })}
             icon={<FileText size={20} />}
             bodyPadding={false}
           >
@@ -565,17 +568,17 @@ export default function SupplierInvoicesPage() {
                   setQuery(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Search invoice, supplier, or order"
+                placeholder={t('supplierInvoices.search')}
                 prefixIcon={<Search size={16} />}
                 wrapperClassName="min-w-60 max-w-md flex-1"
-                aria-label="Search supplier invoices"
+                aria-label={t('supplierInvoices.searchLabel')}
               />
               <div className="inline-flex rounded-md bg-muted-surface p-1">
                 {(
                   [
-                    { key: 'all', label: 'All' },
-                    { key: 'open', label: 'Open' },
-                    { key: 'paid', label: 'Paid' },
+                    { key: 'all', label: t('common.all') },
+                    { key: 'open', label: t('purchaseOrders.open') },
+                    { key: 'paid', label: t('supplierInvoices.paid') },
                   ] as const
                 ).map((item) => (
                   <Button
@@ -594,8 +597,8 @@ export default function SupplierInvoicesPage() {
             </div>
             {isLoading ? (
               <EmptyState
-                title="Loading invoices"
-                description="Please wait."
+                title={t('supplierInvoices.loading')}
+                description={t('supplierInvoices.pleaseWait')}
                 icon={<FileText size={24} />}
               />
             ) : rows.length ? (
@@ -605,20 +608,20 @@ export default function SupplierInvoicesPage() {
                     <thead className="border-b border-border-subtle bg-muted-surface">
                       <tr>
                         {[
-                          'Invoice',
-                          'Supplier',
-                          'Due date',
-                          'Total',
-                          'Paid',
-                          'Balance',
-                          'Status',
-                          'Actions',
+                          { label: t('supplierInvoices.invoice'), right: false },
+                          { label: t('entity.supplier'), right: false },
+                          { label: t('supplierInvoices.dueDate'), right: false },
+                          { label: t('supplierInvoices.total'), right: true },
+                          { label: t('supplierInvoices.paid'), right: true },
+                          { label: t('supplierInvoices.balance'), right: true },
+                          { label: t('purchaseOrders.status'), right: false },
+                          { label: t('purchaseOrders.actions'), right: true },
                         ].map((heading) => (
                           <th
-                            key={heading}
-                            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-secondary first:pl-4 last:pr-4 sm:first:pl-8 sm:last:pr-8 ${['Total', 'Paid', 'Balance', 'Actions'].includes(heading) ? 'text-right' : 'text-left'}`}
+                            key={heading.label}
+                            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-secondary first:pl-4 last:pr-4 sm:first:pl-8 sm:last:pr-8 ${heading.right ? 'text-right' : 'text-left'}`}
                           >
-                            {heading}
+                            {heading.label}
                           </th>
                         ))}
                       </tr>
@@ -650,8 +653,15 @@ export default function SupplierInvoicesPage() {
                                   className={`mt-1 mb-0 text-xs font-bold ${hasMatchIssue ? 'text-warning' : 'text-brand'}`}
                                 >
                                   {hasMatchIssue
-                                    ? `Match review${invoice.match.invoiceVariance ? ` · ${money(invoice.match.invoiceVariance)} vs PO` : ''}${invoice.match.hasUnreceivedQuantity ? ' · items unreceived' : ''}`
-                                    : 'PO / receipt match'}
+                                    ? t('supplierInvoices.matchReview', {
+                                        variance: invoice.match.invoiceVariance
+                                          ? ` · ${t('supplierInvoices.varianceVsPo', { amount: money(invoice.match.invoiceVariance) })}`
+                                          : '',
+                                        unreceived: invoice.match.hasUnreceivedQuantity
+                                          ? ` · ${t('supplierInvoices.itemsUnreceived')}`
+                                          : '',
+                                      })
+                                    : t('supplierInvoices.matchOk')}
                                 </p>
                               )}
                             </td>
@@ -660,7 +670,7 @@ export default function SupplierInvoicesPage() {
                             </td>
                             <td className="px-4 py-4 text-text-muted">
                               {invoice.dueDate
-                                ? new Date(invoice.dueDate).toLocaleDateString()
+                                ? new Date(invoice.dueDate).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US')
                                 : '—'}
                             </td>
                             <td className="px-4 py-4 text-right text-text-secondary">
@@ -689,7 +699,7 @@ export default function SupplierInvoicesPage() {
                                         setAmount((balance / 100).toFixed(2));
                                       }}
                                     >
-                                      Pay
+                                      {t('supplierInvoices.pay')}
                                     </Button>
                                     <Button
                                       variant="secondary"
@@ -701,7 +711,7 @@ export default function SupplierInvoicesPage() {
                                         })
                                       }
                                     >
-                                      Credit note
+                                      {t('supplierInvoices.creditNote')}
                                     </Button>
                                     <Button
                                       variant="warningSubtle"
@@ -717,8 +727,8 @@ export default function SupplierInvoicesPage() {
                                       }
                                     >
                                       {invoice.disputeStatus === 'OPEN'
-                                        ? 'Resolve dispute'
-                                        : 'Dispute'}
+                                        ? t('supplierInvoices.resolveDispute')
+                                        : t('supplierInvoices.dispute')}
                                     </Button>
                                   </>
                                 )}
@@ -743,8 +753,8 @@ export default function SupplierInvoicesPage() {
               </>
             ) : (
               <EmptyState
-                title="No invoices found"
-                description="Try another search or filter."
+                title={t('supplierInvoices.empty')}
+                description={t('supplierInvoices.emptyHelp')}
                 icon={<FileText size={24} />}
               />
             )}
@@ -757,10 +767,10 @@ export default function SupplierInvoicesPage() {
           <Button
             variant="overlay"
             className="absolute inset-0 h-full w-full rounded-none"
-            aria-label="Close payment dialog"
+            aria-label={t('supplierInvoices.closePaymentDialog')}
             onClick={() => setPaymentInvoice(null)}
           >
-            <span className="sr-only">Close payment dialog</span>
+            <span className="sr-only">{t('supplierInvoices.closePaymentDialog')}</span>
           </Button>
           <section
             role="dialog"
@@ -774,10 +784,10 @@ export default function SupplierInvoicesPage() {
                   id="payment-dialog-title"
                   className="m-0 text-base font-bold tracking-tight text-text-main sm:text-lg"
                 >
-                  Record payment · {paymentInvoice.invoiceNumber}
+                  {t('supplierInvoices.recordPayment')} · {paymentInvoice.invoiceNumber}
                 </h2>
                 <p className="mt-1 mb-0 text-xs text-text-muted">
-                  {paymentInvoice.supplier.name} · Remaining{' '}
+                  {paymentInvoice.supplier.name} · {t('supplierInvoices.remaining')}{' '}
                   <strong className="text-brand">
                     {money(balanceFor(paymentInvoice))}
                   </strong>
@@ -786,7 +796,7 @@ export default function SupplierInvoicesPage() {
               <Button
                 variant="iconBareDanger"
                 size="bareIcon"
-                aria-label="Close payment"
+                aria-label={t('supplierInvoices.closePayment')}
                 onClick={() => setPaymentInvoice(null)}
               >
                 <X size={18} />
@@ -796,7 +806,7 @@ export default function SupplierInvoicesPage() {
               onSubmit={pay}
               className="grid grid-cols-1 items-start gap-4 px-4 py-6 sm:grid-cols-2 sm:px-8"
             >
-              <FormField label="Amount (USD)" id="paymentAmount" required>
+              <FormField label={t('supplierInvoices.amountUsd')} id="paymentAmount" required>
                 <Input
                   required
                   id="paymentAmount"
@@ -809,7 +819,7 @@ export default function SupplierInvoicesPage() {
                   prefixText="$"
                 />
               </FormField>
-              <FormField label="Payment method" id="paymentMethod" required>
+              <FormField label={t('supplierInvoices.paymentMethod')} id="paymentMethod" required>
                 <CustomSelect
                   name="paymentMethod"
                   value={paymentMethod}
@@ -818,25 +828,25 @@ export default function SupplierInvoicesPage() {
                 />
               </FormField>
               <FormField
-                label="Note"
+                label={t('purchaseOrders.note')}
                 id="paymentNote"
-                sublabel="(optional)"
+                sublabel={t('common.optional')}
                 className="sm:col-span-2"
               >
                 <Input
                   id="paymentNote"
                   name="note"
-                  placeholder="e.g. Bank transfer receipt"
+                  placeholder={t('supplierInvoices.paymentNotePlaceholder')}
                 />
               </FormField>
               {paymentInvoice.match &&
                 (paymentInvoice.match.invoiceVariance !== 0 ||
                   paymentInvoice.match.hasUnreceivedQuantity) && (
                   <FormField
-                    label="Owner override reason"
+                    label={t('supplierInvoices.overrideReason')}
                     id="overrideReason"
                     required
-                    help="Explain the variance."
+                    help={t('supplierInvoices.explainVariance')}
                     className="sm:col-span-2"
                   >
                     <Input required id="overrideReason" name="overrideReason" />
@@ -847,10 +857,10 @@ export default function SupplierInvoicesPage() {
                   variant="secondary"
                   onClick={() => setPaymentInvoice(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={isSavingPayment}>
-                  {isSavingPayment ? 'Recording…' : 'Record payment'}
+                  {isSavingPayment ? t('supplierInvoices.recording') : t('supplierInvoices.recordPayment')}
                 </Button>
               </div>
             </form>
@@ -863,10 +873,10 @@ export default function SupplierInvoicesPage() {
           <Button
             variant="overlay"
             className="absolute inset-0 h-full w-full rounded-none"
-            aria-label="Close invoice action dialog"
+            aria-label={t('supplierInvoices.closeActionDialog')}
             onClick={() => setInvoiceAction(null)}
           >
-            <span className="sr-only">Close invoice action dialog</span>
+            <span className="sr-only">{t('supplierInvoices.closeActionDialog')}</span>
           </Button>
           <section
             role="dialog"
@@ -881,20 +891,20 @@ export default function SupplierInvoicesPage() {
                   className="m-0 text-base font-bold tracking-tight text-text-main sm:text-lg"
                 >
                   {invoiceAction.mode === 'credit'
-                    ? 'Record credit note'
+                    ? t('supplierInvoices.recordCreditNote')
                     : invoiceAction.mode === 'resolve'
-                      ? 'Resolve dispute'
-                      : 'Open dispute'}
+                      ? t('supplierInvoices.resolveDispute')
+                      : t('supplierInvoices.openDispute')}
                 </h2>
                 <p className="mt-1 mb-0 text-xs text-text-muted">
-                  Invoice {invoiceAction.invoice.invoiceNumber} ·{' '}
+                  {t('supplierInvoices.invoice')} {invoiceAction.invoice.invoiceNumber} ·{' '}
                   {invoiceAction.invoice.supplier.name}
                 </p>
               </div>
               <Button
                 variant="iconBareDanger"
                 size="bareIcon"
-                aria-label="Close dialog"
+                aria-label={t('supplierInvoices.closeDialog')}
                 onClick={() => setInvoiceAction(null)}
               >
                 <X size={18} />
@@ -907,7 +917,7 @@ export default function SupplierInvoicesPage() {
               {invoiceAction.mode === 'credit' ? (
                 <>
                   <FormField
-                    label="Credit amount (USD)"
+                    label={t('supplierInvoices.creditAmountUsd')}
                     id="creditAmount"
                     required
                   >
@@ -922,13 +932,13 @@ export default function SupplierInvoicesPage() {
                     />
                   </FormField>
                   <FormField
-                    label="Reference"
+                    label={t('suppliers.reference')}
                     id="creditReference"
-                    sublabel="(optional)"
+                    sublabel={t('common.optional')}
                   >
                     <Input id="creditReference" name="reference" />
                   </FormField>
-                  <FormField label="Note" id="creditNote" sublabel="(optional)">
+                  <FormField label={t('purchaseOrders.note')} id="creditNote" sublabel={t('common.optional')}>
                     <Input id="creditNote" name="note" />
                   </FormField>
                 </>
@@ -937,8 +947,8 @@ export default function SupplierInvoicesPage() {
                   <FormField
                     label={
                       invoiceAction.mode === 'resolve'
-                        ? 'Resolution note'
-                        : 'Dispute reason'
+                        ? t('supplierInvoices.resolutionNote')
+                        : t('supplierInvoices.disputeReason')
                     }
                     id="disputeReason"
                     required
@@ -946,9 +956,9 @@ export default function SupplierInvoicesPage() {
                     <Input required id="disputeReason" name="reason" />
                   </FormField>
                   <FormField
-                    label="Supplier reference"
+                    label={t('purchaseOrders.supplierReference')}
                     id="disputeReference"
-                    sublabel="(optional)"
+                    sublabel={t('common.optional')}
                   >
                     <Input id="disputeReference" name="reference" />
                   </FormField>
@@ -959,7 +969,7 @@ export default function SupplierInvoicesPage() {
                   variant="secondary"
                   onClick={() => setInvoiceAction(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="submit"
@@ -971,12 +981,12 @@ export default function SupplierInvoicesPage() {
                   disabled={isSavingAction}
                 >
                   {isSavingAction
-                    ? 'Saving…'
+                    ? t('common.saving')
                     : invoiceAction.mode === 'credit'
-                      ? 'Record credit'
+                      ? t('supplierInvoices.recordCredit')
                       : invoiceAction.mode === 'resolve'
-                        ? 'Resolve dispute'
-                        : 'Open dispute'}
+                        ? t('supplierInvoices.resolveDispute')
+                        : t('supplierInvoices.openDispute')}
                 </Button>
               </div>
             </form>

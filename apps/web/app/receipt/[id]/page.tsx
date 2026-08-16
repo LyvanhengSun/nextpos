@@ -13,6 +13,7 @@ import {
   PageHeading,
 } from '../../../components/ui';
 import { getDeviceSettings } from '../../../lib/device-settings';
+import { useI18n } from '../../../lib/i18n';
 
 const api = '/api';
 
@@ -49,6 +50,7 @@ type Sale = {
 const money = (amount: number) => `$${(amount / 100).toFixed(2)}`;
 
 export default function ReceiptPage() {
+  const { t, locale } = useI18n();
   const params = useParams<{ id: string }>();
   const [sale, setSale] = useState<Sale>();
   const [message, setMessage] = useState('');
@@ -66,7 +68,7 @@ export default function ReceiptPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (response) => {
-        if (!response.ok) throw new Error('Receipt not found.');
+        if (!response.ok) throw new Error(t('receipt.notFound'));
         setSale(await response.json());
       })
       .catch((error: Error) => setMessage(error.message));
@@ -75,15 +77,15 @@ export default function ReceiptPage() {
   if (!sale) {
     return (
       <main className="w-full pb-16">
-        <PageHeading eyebrow="Transactions" title="Sales receipt" />
+        <PageHeading eyebrow={t('sales.transactions')} title={t('receipt.salesReceipt')} />
         <div className="py-6">
           <PageContainer>
             {message ? (
               <AlertBanner tone="error">{message}</AlertBanner>
             ) : (
               <EmptyState
-                title="Loading receipt"
-                description="Loading transaction."
+                title={t('receipt.loading')}
+                description={t('receipt.loadingTransaction')}
                 icon={<ReceiptText size={24} />}
                 className="min-h-64 rounded-lg border border-border-subtle bg-card shadow-sm"
               />
@@ -102,18 +104,18 @@ export default function ReceiptPage() {
   return (
     <main className="receipt w-full pb-16 print:pb-0">
       <PageHeading
-        eyebrow="Transactions"
-        title={`Receipt #${receiptNumber}`}
+        eyebrow={t('sales.transactions')}
+        title={t('receipt.number', { number: receiptNumber })}
         className="print-hide"
         actions={
           <>
             <ButtonLink href="/sales" variant="secondary">
               <ArrowLeft size={16} aria-hidden="true" />
-              Back to sales
+              {t('receipt.backToSales')}
             </ButtonLink>
             <Button onClick={() => window.print()}>
               <Printer size={16} aria-hidden="true" />
-              Print receipt
+              {t('receipt.print')}
             </Button>
           </>
         }
@@ -130,7 +132,7 @@ export default function ReceiptPage() {
           >
             <header className="border-b border-dashed border-border-default px-4 py-5 text-center sm:px-8 sm:py-6 print:px-3 print:py-4">
               <p className="m-0 text-xs font-black uppercase tracking-wider text-brand">
-                Sales receipt
+                {t('receipt.salesReceipt')}
               </p>
               <h1 className="mt-1.5 mb-0 text-xl font-extrabold tracking-tight text-text-main sm:text-2xl">
                 {sale.business.name}
@@ -150,7 +152,7 @@ export default function ReceiptPage() {
               )}
               <div className="mt-3 flex flex-col items-center gap-1 text-xs text-text-muted">
                 <time dateTime={sale.createdAt}>
-                  {saleDate.toLocaleString()}
+                  {saleDate.toLocaleString(locale === 'km' ? 'km-KH' : 'en-US')}
                 </time>
                 <strong className="font-bold tracking-wide text-text-main">
                   #{receiptNumber}
@@ -158,11 +160,11 @@ export default function ReceiptPage() {
               </div>
             </header>
 
-            <section aria-label="Purchased items">
+            <section aria-label={t('receipt.purchasedItems')}>
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b border-border-subtle bg-muted-surface px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-secondary sm:px-8 print:px-3">
-                <span>Product</span>
-                <span className="text-right">Price</span>
-                <span className="text-right">Total</span>
+                <span>{t('entity.product')}</span>
+                <span className="text-right">{t('products.price')}</span>
+                <span className="text-right">{t('dashboard.total')}</span>
               </div>
               <div className="divide-y divide-border-subtle">
                 {sale.items.map((item, index) => {
@@ -180,7 +182,7 @@ export default function ReceiptPage() {
                         </strong>
                         {hasSale && (
                           <s className="mt-1 block text-xs text-text-muted">
-                            Regular: {money(item.product.regularPrice!)}
+                            {t('receipt.regularPrice', { amount: money(item.product.regularPrice!) })}
                           </s>
                         )}
                         {item.modifiers?.length ? (
@@ -192,7 +194,7 @@ export default function ReceiptPage() {
                         ) : null}
                         {item.note ? (
                           <small className="mt-1 block text-xs leading-relaxed text-text-muted">
-                            Note: {item.note}
+                            {t('sales.noteNamed', { note: item.note })}
                           </small>
                         ) : null}
                       </div>
@@ -212,7 +214,7 @@ export default function ReceiptPage() {
               {sale.note && (
                 <div className="mb-5 rounded-lg border-l-4 border-brand bg-muted-surface p-4">
                   <strong className="block text-xs font-bold uppercase tracking-wider text-text-secondary">
-                    Order note
+                    {t('pos.orderNote')}
                   </strong>
                   <p className="mt-1 mb-0 text-xs leading-relaxed text-text-muted">
                     {sale.note}
@@ -222,14 +224,14 @@ export default function ReceiptPage() {
 
               <dl className="m-0 grid gap-2 text-sm">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-text-muted">Subtotal</dt>
+                  <dt className="text-text-muted">{t('pos.subtotal')}</dt>
                   <dd className="m-0 font-semibold text-text-main">
                     {money(sale.subtotal)}
                   </dd>
                 </div>
                 {sale.discountTotal > 0 && (
                   <div className="flex items-center justify-between gap-4 text-success">
-                    <dt>Discount</dt>
+                    <dt>{t('pos.discount')}</dt>
                     <dd className="m-0 font-semibold">
                       -{money(sale.discountTotal)}
                     </dd>
@@ -237,14 +239,14 @@ export default function ReceiptPage() {
                 )}
                 {sale.taxTotal > 0 && (
                   <div className="flex items-center justify-between gap-4">
-                    <dt className="text-text-muted">Tax</dt>
+                    <dt className="text-text-muted">{t('pos.taxLabel')}</dt>
                     <dd className="m-0 font-semibold text-text-main">
                       {money(sale.taxTotal)}
                     </dd>
                   </div>
                 )}
                 <div className="mt-1 flex items-center justify-between gap-4 border-t border-border-subtle pt-3 text-lg">
-                  <dt className="font-extrabold text-text-main">Total</dt>
+                  <dt className="font-extrabold text-text-main">{t('dashboard.total')}</dt>
                   <dd className="m-0 font-extrabold text-text-main">
                     {money(sale.total)}
                   </dd>
@@ -253,21 +255,25 @@ export default function ReceiptPage() {
 
               <dl className="mt-5 mb-0 grid gap-2 border-t border-dashed border-border-default pt-4 text-sm">
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-text-muted">Payment</dt>
+                  <dt className="text-text-muted">{t('dashboard.payment')}</dt>
                   <dd className="m-0 font-bold text-text-main">
-                    {sale.paymentMethod}
+                    {sale.paymentMethod === 'CASH'
+                      ? t('payment.cash')
+                      : sale.paymentMethod === 'CARD'
+                        ? t('payment.card')
+                        : sale.paymentMethod}
                   </dd>
                 </div>
                 {sale.paymentMethod === 'CASH' && (
                   <>
                     <div className="flex items-center justify-between gap-4">
-                      <dt className="text-text-muted">Cash received</dt>
+                      <dt className="text-text-muted">{t('receipt.cashReceived')}</dt>
                       <dd className="m-0 font-semibold text-text-main">
                         {money(sale.amountTendered ?? sale.total)}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-4">
-                      <dt className="text-text-muted">Change</dt>
+                      <dt className="text-text-muted">{t('receipt.change')}</dt>
                       <dd className="m-0 font-semibold text-text-main">
                         {money(sale.changeDue)}
                       </dd>
@@ -278,7 +284,7 @@ export default function ReceiptPage() {
             </div>
 
             <footer className="border-t border-dashed border-border-default px-4 py-5 text-center text-xs font-semibold text-text-muted sm:px-8 print:px-3">
-              {sale.business.receiptFooter || 'Thank you for your visit!'}
+              {sale.business.receiptFooter || t('receipt.thankYou')}
             </footer>
           </article>
         </PageContainer>

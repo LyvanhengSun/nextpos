@@ -2,8 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useI18n } from '../lib/i18n';
 
 export default function Home() {
+  const { t } = useI18n();
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-app px-4 text-text-muted">
-      <p className="m-0 text-sm font-bold">Loading KN POS…</p>
+      <p className="m-0 text-sm font-bold">{t('auth.loadingApp')}</p>
     </div>
   );
 }

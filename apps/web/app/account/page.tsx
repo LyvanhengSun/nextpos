@@ -23,6 +23,7 @@ import {
   SectionCard,
   StatusBadge,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -37,6 +38,7 @@ type AccountUser = {
 };
 
 export default function AccountPage() {
+  const { t } = useI18n();
   const [user, setUser] = useState<AccountUser | null>(null);
   const [branchName, setBranchName] = useState('');
   const [message, setMessage] = useState('');
@@ -59,7 +61,7 @@ export default function AccountPage() {
     async function loadData() {
       try {
         const response = await fetch(`${api}/auth/me`, { headers });
-        if (!response.ok) throw new Error('Please sign in again.');
+        if (!response.ok) throw new Error(t('account.error.signIn'));
         const data = await response.json();
         setUser(data);
 
@@ -90,7 +92,7 @@ export default function AccountPage() {
         }
       } catch (error) {
         setMessage(
-          error instanceof Error ? error.message : 'Please sign in again.',
+          error instanceof Error ? error.message : t('account.error.signIn'),
         );
         setIsSuccess(false);
       }
@@ -110,7 +112,7 @@ export default function AccountPage() {
     >;
 
     if (values.newPassword !== values.confirmPassword) {
-      setMessage('New passwords do not match.');
+      setMessage(t('account.error.passwordMismatch'));
       return;
     }
 
@@ -127,14 +129,14 @@ export default function AccountPage() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to change password.');
+        throw new Error(data.message ?? t('account.error.changePassword'));
 
       form.reset();
-      setMessage('Password changed successfully.');
+      setMessage(t('account.success.passwordChanged'));
       setIsSuccess(true);
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : 'Unable to change password.',
+        error instanceof Error ? error.message : t('account.error.changePassword'),
       );
       setIsSuccess(false);
     } finally {
@@ -146,31 +148,31 @@ export default function AccountPage() {
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
     : 'U';
   const roleLabel = !user
-    ? 'Profile unavailable'
+    ? t('account.profileUnavailable')
     : user.role === 'OWNER'
-      ? 'Owner & Admin'
+      ? t('account.ownerAdmin')
       : user.role === 'MANAGER'
-        ? 'Manager'
-        : 'Cashier';
+        ? t('dashboard.manager')
+        : t('account.cashier');
   const currentBranch = branchName
     ? branchName
     : user?.branchId
-      ? `Branch (${user.branchId.slice(0, 8)})`
-      : 'All locations';
+      ? t('account.branchNamed', { id: user.branchId.slice(0, 8) })
+      : t('account.allLocations');
 
   const profileItems = [
     {
-      label: 'Email address',
+      label: t('auth.email'),
       value: user?.email ?? '—',
       icon: <Mail size={16} />,
     },
     {
-      label: 'Access level',
+      label: t('account.accessLevel'),
       value: roleLabel,
       icon: <UserCheck size={16} />,
     },
     {
-      label: 'Current branch',
+      label: t('account.currentBranch'),
       value: currentBranch,
       icon: <Building2 size={16} />,
     },
@@ -179,8 +181,8 @@ export default function AccountPage() {
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Account profile"
-        title={user ? `${user.firstName} ${user.lastName}` : 'My account'}
+        eyebrow={t('account.eyebrow')}
+        title={user ? `${user.firstName} ${user.lastName}` : t('account.myAccount')}
       />
 
       <div>
@@ -213,14 +215,14 @@ export default function AccountPage() {
                       className={`absolute right-0 bottom-0 size-4 rounded-full border-[3px] border-card ${
                         user ? 'bg-brand' : 'bg-muted-strong'
                       }`}
-                      title={user ? 'Active session' : 'Session unavailable'}
+                      title={user ? t('account.activeSessionShort') : t('account.sessionUnavailable')}
                     />
                   </div>
                   <div className="min-w-0">
                     <h2 className="m-0 text-base font-bold tracking-tight text-text-main sm:text-lg">
                       {user
                         ? `${user.firstName} ${user.lastName}`
-                        : 'Loading profile…'}
+                        : t('account.loadingProfile')}
                     </h2>
                     <p className="mt-0.5 mb-0 break-all text-sm text-text-muted">
                       {user?.email ?? '—'}
@@ -263,14 +265,14 @@ export default function AccountPage() {
                     </div>
                     <div>
                       <span className="block text-xs font-medium text-text-muted">
-                        Account status
+                        {t('account.status')}
                       </span>
                       <strong
                         className={`mt-0.5 block text-sm ${
                           user ? 'text-brand' : 'text-text-muted'
                         }`}
                       >
-                        {user ? 'Active' : 'Unavailable'}
+                        {user ? t('common.active') : t('account.unavailable')}
                       </strong>
                     </div>
                   </div>
@@ -278,8 +280,8 @@ export default function AccountPage() {
               </SectionCard>
 
               <SectionCard
-                title="Active web session"
-                description={user ? 'Connected to POS.' : 'Sign in again.'}
+                title={t('account.activeSession')}
+                description={user ? t('account.connected') : t('account.signInAgain')}
                 icon={<Laptop size={20} />}
               >
                 <div className="rounded-lg border border-border-subtle bg-muted-surface p-5">
@@ -292,13 +294,13 @@ export default function AccountPage() {
                       }`}
                     />
                     <strong className="text-sm text-text-main">
-                      {user ? 'Active session' : 'Session unavailable'}
+                      {user ? t('account.activeSessionShort') : t('account.sessionUnavailable')}
                     </strong>
                   </div>
                   <p className="mt-2 mb-0 text-xs leading-relaxed text-text-muted">
                     {user
-                      ? 'Session renews while you work.'
-                      : 'Sign in to restore access.'}
+                      ? t('account.sessionRenews')
+                      : t('account.restoreAccess')}
                   </p>
                 </div>
               </SectionCard>
@@ -306,8 +308,8 @@ export default function AccountPage() {
 
             <div className="flex flex-col gap-6">
               <SectionCard
-                title="Change password"
-                description="Use 12+ characters."
+                title={t('account.changePassword')}
+                description={t('account.passwordHelp')}
                 icon={<Lock size={20} />}
               >
                 <form
@@ -318,7 +320,7 @@ export default function AccountPage() {
                   className="flex flex-col gap-4"
                 >
                   <FormField
-                    label="Current password"
+                    label={t('account.currentPassword')}
                     required
                     id="current-password"
                   >
@@ -328,13 +330,13 @@ export default function AccountPage() {
                       type="password"
                       name="currentPassword"
                       autoComplete="current-password"
-                      placeholder="Current password"
+                      placeholder={t('account.currentPassword')}
                     />
                   </FormField>
                   <FormField
-                    label="New password"
+                    label={t('account.newPassword')}
                     required
-                    help="12+ characters."
+                    help={t('account.passwordHelp')}
                     id="new-password"
                   >
                     <Input
@@ -344,11 +346,11 @@ export default function AccountPage() {
                       minLength={12}
                       name="newPassword"
                       autoComplete="new-password"
-                      placeholder="New password"
+                      placeholder={t('account.newPassword')}
                     />
                   </FormField>
                   <FormField
-                    label="Confirm new password"
+                    label={t('account.confirmPassword')}
                     required
                     id="confirm-password"
                   >
@@ -359,25 +361,25 @@ export default function AccountPage() {
                       minLength={12}
                       name="confirmPassword"
                       autoComplete="new-password"
-                      placeholder="Confirm password"
+                      placeholder={t('account.confirmPassword')}
                     />
                   </FormField>
                   <div className="flex justify-end border-t border-border-subtle pt-4">
                     <Button type="submit" disabled={isSubmitting}>
                       <Lock size={16} />
-                      {isSubmitting ? 'Updating…' : 'Update password'}
+                      {isSubmitting ? t('account.updating') : t('account.updatePassword')}
                     </Button>
                   </div>
                 </form>
               </SectionCard>
 
               <SectionCard
-                title="Terminal quick PIN"
-                description="For cashier switch and approvals."
+                title={t('account.quickPin')}
+                description={t('account.quickPinHelp')}
                 icon={<KeyRound size={20} />}
               >
                 <AlertBanner tone="warning" icon={<ShieldCheck size={18} />}>
-                  Manage PINs in Staff & Access Control.
+                  {t('account.managePins')}
                 </AlertBanner>
               </SectionCard>
             </div>

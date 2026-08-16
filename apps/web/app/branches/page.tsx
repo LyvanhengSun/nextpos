@@ -26,6 +26,7 @@ import {
   StatusBadge,
   Textarea,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -39,6 +40,7 @@ type Branch = {
 type Me = { branchId: string | null; role: string };
 
 export default function BranchesPage() {
+  const { t } = useI18n();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [message, setMessage] = useState('');
@@ -74,7 +76,7 @@ export default function BranchesPage() {
       fetch(`${api}/businesses/current/branches`, { headers: requestHeaders }),
     ]);
     if (!meResponse.ok || !branchResponse.ok)
-      throw new Error('Please sign in again.');
+      throw new Error(t('branches.error.signIn'));
     setMe(await meResponse.json());
     setBranches(await branchResponse.json());
   }
@@ -95,13 +97,13 @@ export default function BranchesPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to create branch.');
+        throw new Error(data.message ?? t('branches.error.create'));
       formElement.reset();
-      notify(`${data.name} created.`);
+      notify(t('branches.success.created', { name: data.name }));
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to create branch.',
+        error instanceof Error ? error.message : t('branches.error.create'),
         'error',
       );
     } finally {
@@ -118,16 +120,16 @@ export default function BranchesPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to switch branch.');
+        throw new Error(data.message ?? t('branches.error.switch'));
       sessionStorage.setItem('pos_access_token', data.accessToken);
       setMe((current) =>
         current ? { ...current, branchId: branch.id } : current,
       );
       await load(data.accessToken);
-      notify(`Now working from ${branch.name}.`);
+      notify(t('branches.success.switched', { name: branch.name }));
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to switch branch.',
+        error instanceof Error ? error.message : t('branches.error.switch'),
         'error',
       );
     }
@@ -150,13 +152,13 @@ export default function BranchesPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to update branch.');
+        throw new Error(data.message ?? t('branches.error.update'));
       setEditing(null);
-      notify(`${data.name} updated.`);
+      notify(t('branches.success.updated', { name: data.name }));
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to update branch.',
+        error instanceof Error ? error.message : t('branches.error.update'),
         'error',
       );
     } finally {
@@ -168,7 +170,7 @@ export default function BranchesPage() {
 
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Business locations" title="Branches" />
+      <PageHeading eyebrow={t('branches.eyebrow')} title={t('entity.branches')} />
 
       <div>
         <PageContainer>
@@ -190,8 +192,7 @@ export default function BranchesPage() {
 
           {!canManage && me && (
             <AlertBanner tone="info" className="mb-5">
-              Owner only can create or edit branches. You can still switch
-              branch.
+              {t('branches.ownerOnly')}
             </AlertBanner>
           )}
 
@@ -204,8 +205,8 @@ export default function BranchesPage() {
           >
             {canManage && (
               <SectionCard
-                title="Add branch"
-                description="Create a store location."
+                title={t('branches.add')}
+                description={t('branches.addHelp')}
                 icon={<Building2 size={20} />}
               >
                 <form
@@ -213,40 +214,40 @@ export default function BranchesPage() {
                   onSubmit={create}
                   autoComplete="off"
                 >
-                  <FormField label="Branch name" required id="branch-name">
+                  <FormField label={t('branches.name')} required id="branch-name">
                     <Input
                       id="branch-name"
                       required
                       name="name"
-                      placeholder="e.g. Siem Reap store"
+                      placeholder={t('branches.namePlaceholder')}
                     />
                   </FormField>
                   <FormField
-                    label="Branch code"
+                    label={t('branches.code')}
                     required
-                    help="Short report code."
+                    help={t('branches.codeHelp')}
                     id="branch-code"
                   >
                     <Input
                       id="branch-code"
                       required
                       name="code"
-                      placeholder="e.g. SR"
+                      placeholder={t('branches.codePlaceholder')}
                       maxLength={24}
                       autoCapitalize="characters"
                       className="uppercase"
                     />
                   </FormField>
                   <FormField
-                    label="Address"
-                    sublabel="(optional)"
+                    label={t('branches.address')}
+                    sublabel={t('common.optional')}
                     id="branch-address"
                   >
                     <Textarea
                       id="branch-address"
                       name="address"
                       rows={3}
-                      placeholder="Street, city, or area"
+                      placeholder={t('branches.addressPlaceholder')}
                     />
                   </FormField>
                   <Button
@@ -255,19 +256,19 @@ export default function BranchesPage() {
                     className="w-full"
                   >
                     <Plus size={16} />
-                    {saving ? 'Creating…' : 'Create branch'}
+                    {saving ? t('branches.creating') : t('branches.create')}
                   </Button>
                 </form>
               </SectionCard>
             )}
 
             <SectionCard
-              title="Your branches"
-              description="Choose current branch."
+              title={t('branches.yours')}
+              description={t('branches.chooseCurrent')}
               icon={<Store size={20} />}
               actions={
                 <span className="rounded-full bg-muted-strong px-2.5 py-1 text-xs font-bold text-text-secondary">
-                  {branches.length} {branches.length === 1 ? 'branch' : 'branches'}
+                  {t('branches.count', { count: branches.length })}
                 </span>
               }
               bodyClassName="flex flex-col gap-3"
@@ -302,7 +303,7 @@ export default function BranchesPage() {
                             {active && (
                               <StatusBadge tone="success">
                                 <CheckCircle2 size={13} />
-                                Current
+                                {t('branches.current')}
                               </StatusBadge>
                             )}
                           </div>
@@ -316,12 +317,12 @@ export default function BranchesPage() {
                           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-text-secondary">
                             <span className="inline-flex items-center gap-1">
                               <Users size={13} />
-                              {branch._count.users} staff
+                              {t('branches.staffCount', { count: branch._count.users })}
                             </span>
                             <span>
-                              {branch._count.inventory} stocked
+                              {t('branches.stockedCount', { count: branch._count.inventory })}
                             </span>
-                            <span>{branch._count.sales} sales</span>
+                            <span>{t('branches.salesCount', { count: branch._count.sales })}</span>
                           </div>
                         </div>
                       </div>
@@ -334,7 +335,7 @@ export default function BranchesPage() {
                             onClick={() => void selectBranch(branch)}
                           >
                             <MapPin size={15} />
-                            Use branch
+                            {t('branches.use')}
                           </Button>
                         )}
                         {canManage && (
@@ -345,7 +346,7 @@ export default function BranchesPage() {
                             onClick={() => setEditing(branch)}
                           >
                             <Pencil size={15} />
-                            Edit
+                            {t('common.edit')}
                           </Button>
                         )}
                       </div>
@@ -355,11 +356,11 @@ export default function BranchesPage() {
               ) : (
                 <EmptyState
                   icon={<Building2 size={24} />}
-                  title="No branches yet"
+                  title={t('branches.empty')}
                   description={
                     canManage
-                      ? 'Create your first branch.'
-                      : 'Ask the owner to create one.'
+                      ? t('branches.emptyOwner')
+                      : t('branches.emptyStaff')
                   }
                 />
               )}
@@ -374,10 +375,10 @@ export default function BranchesPage() {
             type="button"
             variant="overlay"
             className="absolute inset-0 h-auto w-auto rounded-none p-0"
-            aria-label="Close branch editor"
+            aria-label={t('branches.closeEditor')}
             onClick={() => setEditing(null)}
           >
-            <span className="sr-only">Close branch editor</span>
+            <span className="sr-only">{t('branches.closeEditor')}</span>
           </Button>
           <aside
             className="fixed inset-y-0 right-0 z-[81] flex h-dvh w-full max-w-md flex-col overflow-hidden border-l border-border-subtle bg-card shadow-2xl"
@@ -395,10 +396,10 @@ export default function BranchesPage() {
                     id="branch-drawer-title"
                     className="m-0 text-base font-bold tracking-tight text-text-main sm:text-lg"
                   >
-                    Edit branch
+                    {t('branches.edit')}
                   </h2>
                   <p className="mt-0.5 mb-0 truncate text-xs text-text-muted">
-                    Update {editing.name}.
+                    {t('branches.updateNamed', { name: editing.name })}
                   </p>
                 </div>
               </div>
@@ -408,7 +409,7 @@ export default function BranchesPage() {
                 size="bareIcon"
                 className="shrink-0 text-text-muted hover:text-rose-500"
                 onClick={() => setEditing(null)}
-                aria-label="Close branch editor"
+                aria-label={t('branches.closeEditor')}
               >
                 <X size={19} />
               </Button>
@@ -419,7 +420,7 @@ export default function BranchesPage() {
               autoComplete="off"
             >
               <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-6 sm:px-6">
-                <FormField label="Branch name" required id="edit-branch-name">
+                <FormField label={t('branches.name')} required id="edit-branch-name">
                   <Input
                     id="edit-branch-name"
                     required
@@ -428,9 +429,9 @@ export default function BranchesPage() {
                   />
                 </FormField>
                 <FormField
-                  label="Branch code"
+                  label={t('branches.code')}
                   required
-                  help="Short report code."
+                  help={t('branches.codeHelp')}
                   id="edit-branch-code"
                 >
                   <Input
@@ -444,8 +445,8 @@ export default function BranchesPage() {
                   />
                 </FormField>
                 <FormField
-                  label="Address"
-                  sublabel="(optional)"
+                  label={t('branches.address')}
+                  sublabel={t('common.optional')}
                   id="edit-branch-address"
                 >
                   <Textarea
@@ -453,7 +454,7 @@ export default function BranchesPage() {
                     name="address"
                     rows={3}
                     defaultValue={editing.address ?? ''}
-                    placeholder="Street, city, or area"
+                    placeholder={t('branches.addressPlaceholder')}
                   />
                 </FormField>
               </div>
@@ -463,11 +464,11 @@ export default function BranchesPage() {
                   variant="secondary"
                   onClick={() => setEditing(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={saving}>
                   <Building2 size={16} />
-                  {saving ? 'Saving…' : 'Save changes'}
+                  {saving ? t('common.saving') : t('branches.saveChanges')}
                 </Button>
               </footer>
             </form>

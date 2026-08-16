@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { AppShell } from '../components/layout/app-shell';
 import { PwaRegistrar } from '../components/layout/pwa-registrar';
+import { I18nProvider } from '../lib/i18n';
 import './styles.css';
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <PwaRegistrar />
-        <AppShell>{children}</AppShell>
+        <I18nProvider>
+          <AppShell>{children}</AppShell>
+        </I18nProvider>
       </body>
     </html>
   );

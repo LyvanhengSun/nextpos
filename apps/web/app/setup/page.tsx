@@ -18,9 +18,11 @@ import {
   CustomSelect,
   FormField,
   Input,
+  LanguageSwitcher,
   PasswordInput,
   SectionCard,
 } from '@/components/ui';
+import { useI18n } from '@/lib/i18n';
 
 const initialValues = {
   name: '',
@@ -30,12 +32,6 @@ const initialValues = {
   password: '',
   confirmPassword: '',
 };
-
-const currencyOptions = [
-  { value: 'USD', label: 'US Dollar (USD)' },
-  { value: 'KHR', label: 'Cambodian Riel (KHR)' },
-  { value: 'BOTH', label: 'USD and KHR' },
-];
 
 type MessageState = {
   tone: 'success' | 'error';
@@ -53,6 +49,7 @@ function createBusinessCode(name: string) {
 }
 
 export default function SetupPage() {
+  const { t } = useI18n();
   const [values, setValues] = useState(initialValues);
   const [message, setMessage] = useState<MessageState>();
   const [saving, setSaving] = useState(false);
@@ -73,14 +70,14 @@ export default function SetupPage() {
     setMessage(undefined);
 
     if (values.password !== values.confirmPassword) {
-      setMessage({ tone: 'error', text: 'Passwords do not match.' });
+      setMessage({ tone: 'error', text: t('setup.passwordMismatch') });
       setSaving(false);
       return;
     }
 
     const nameParts = values.ownerName.trim().split(/\s+/).filter(Boolean);
     const ownerFirstName = nameParts.shift() ?? '';
-    const ownerLastName = nameParts.join(' ') || 'Owner';
+    const ownerLastName = nameParts.join(' ') || t('setup.ownerFallback');
 
     try {
       const response = await fetch('/api/businesses', {
@@ -90,7 +87,7 @@ export default function SetupPage() {
           name: values.name.trim(),
           code: createBusinessCode(values.name),
           currency: values.currency,
-          branchName: 'Main Branch',
+          branchName: t('setup.mainBranch'),
           branchCode: 'MAIN',
           ownerFirstName,
           ownerLastName,
@@ -100,12 +97,12 @@ export default function SetupPage() {
       });
       const data = (await response.json()) as { message?: string };
       if (!response.ok) {
-        throw new Error(data.message ?? 'Unable to create the business.');
+        throw new Error(data.message ?? t('setup.error.create'));
       }
 
       setMessage({
         tone: 'success',
-        text: 'Business created. You can now sign in with your email and password.',
+        text: t('setup.created'),
       });
       setValues(initialValues);
     } catch (error) {
@@ -114,7 +111,7 @@ export default function SetupPage() {
         text:
           error instanceof Error
             ? error.message
-            : 'Unable to contact the API. Start it with pnpm dev.',
+            : t('setup.error.api'),
       });
     } finally {
       setSaving(false);
@@ -123,6 +120,9 @@ export default function SetupPage() {
 
   return (
     <main className="min-h-dvh bg-app lg:grid lg:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]">
+      <div className="fixed top-4 right-4 z-20">
+        <LanguageSwitcher />
+      </div>
       <aside className="relative overflow-hidden bg-text-main px-4 py-6 text-white sm:px-8 lg:flex lg:min-h-dvh lg:flex-col lg:justify-between lg:px-10 lg:py-12">
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
         <div className="relative">
@@ -132,7 +132,7 @@ export default function SetupPage() {
             </span>
             <div>
               <p className="m-0 text-xs font-bold uppercase tracking-widest text-brand-border">
-                Point of sale
+                {t('auth.pointOfSale')}
               </p>
               <p className="mb-0 mt-0.5 text-lg font-bold">KN POS</p>
             </div>
@@ -140,20 +140,20 @@ export default function SetupPage() {
 
           <div className="mt-8 max-w-md lg:mt-20">
             <p className="m-0 text-xs font-bold uppercase tracking-widest text-brand-border">
-              Quick setup
+              {t('setup.quickSetup')}
             </p>
             <h1 className="mb-0 mt-2 text-xl font-bold leading-tight tracking-tight sm:text-2xl lg:text-3xl">
-              Start selling in minutes.
+              {t('setup.startSelling')}
             </h1>
             <p className="mb-0 mt-3 text-sm leading-6 text-muted-strong">
-              Enter the essentials now. Branch, receipt, tax, and inventory details can be completed later.
+              {t('setup.intro')}
             </p>
           </div>
         </div>
 
         <div className="relative mt-8 hidden items-center gap-2 text-xs text-border-default lg:flex">
           <ShieldCheck size={16} className="text-brand-border" />
-          <span>Secure owner setup</span>
+          <span>{t('setup.secureOwner')}</span>
         </div>
       </aside>
 
@@ -161,17 +161,17 @@ export default function SetupPage() {
         <div className="mx-auto w-full max-w-2xl">
           <header className="mb-5">
             <p className="m-0 text-xs font-bold uppercase tracking-widest text-brand">
-              Create workspace
+              {t('setup.createWorkspace')}
             </p>
             <h2 className="mb-0 mt-1 text-xl font-bold tracking-tight text-text-main sm:text-2xl">
-              Tell us about your business
+              {t('setup.aboutBusiness')}
             </h2>
           </header>
 
           <form onSubmit={submit}>
             <SectionCard
-              title="Business and owner"
-              description="Only the essentials. You can change these details later."
+              title={t('setup.businessOwner')}
+              description={t('setup.essentials')}
               icon={<Building2 size={20} />}
             >
               <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2">
@@ -185,48 +185,52 @@ export default function SetupPage() {
                   </AlertBanner>
                 )}
 
-                <FormField id="setup-name" label="Business name" required>
+                <FormField id="setup-name" label={t('setup.businessName')} required>
                   <Input
                     id="setup-name"
                     required
                     autoComplete="organization"
                     value={values.name}
-                    placeholder="e.g. My Shop"
+                    placeholder={t('setup.businessPlaceholder')}
                     prefixIcon={<Building2 size={16} />}
                     onChange={(event) => updateValue('name', event.target.value)}
                   />
                 </FormField>
 
-                <FormField id="setup-currency" label="Currency" required>
+                <FormField id="setup-currency" label={t('setup.currency')} required>
                   <CustomSelect
                     name="currency"
                     value={values.currency}
-                    options={currencyOptions}
+                    options={[
+                      { value: 'USD', label: t('setup.usd') },
+                      { value: 'KHR', label: t('setup.khr') },
+                      { value: 'BOTH', label: t('setup.bothCurrencies') },
+                    ]}
                     leadingIcon={<Coins size={16} />}
                     onChange={(value) => updateValue('currency', value)}
                   />
                 </FormField>
 
-                <FormField id="setup-owner-name" label="Your name" required>
+                <FormField id="setup-owner-name" label={t('setup.yourName')} required>
                   <Input
                     id="setup-owner-name"
                     required
                     autoComplete="name"
                     value={values.ownerName}
-                    placeholder="e.g. John Doe"
+                    placeholder={t('setup.namePlaceholder')}
                     prefixIcon={<CircleUserRound size={16} />}
                     onChange={(event) => updateValue('ownerName', event.target.value)}
                   />
                 </FormField>
 
-                <FormField id="setup-owner-email" label="Email address" required>
+                <FormField id="setup-owner-email" label={t('auth.email')} required>
                   <Input
                     id="setup-owner-email"
                     required
                     type="email"
                     autoComplete="email"
                     value={values.ownerEmail}
-                    placeholder="owner@example.com"
+                    placeholder={t('setup.emailPlaceholder')}
                     prefixIcon={<Mail size={16} />}
                     onChange={(event) => updateValue('ownerEmail', event.target.value)}
                   />
@@ -234,9 +238,9 @@ export default function SetupPage() {
 
                 <FormField
                   id="setup-password"
-                  label="Password"
+                  label={t('auth.password')}
                   required
-                  help="Use at least 12 characters."
+                  help={t('setup.passwordHelp')}
                 >
                   <PasswordInput
                     id="setup-password"
@@ -245,18 +249,18 @@ export default function SetupPage() {
                     maxLength={128}
                     autoComplete="new-password"
                     value={values.password}
-                    placeholder="12+ characters"
+                    placeholder={t('staff.passwordPlaceholder')}
                     onChange={(event) => updateValue('password', event.target.value)}
                   />
                 </FormField>
 
                 <FormField
                   id="setup-confirm-password"
-                  label="Confirm password"
+                  label={t('setup.confirmPassword')}
                   required
                   error={
                     values.confirmPassword && values.password !== values.confirmPassword
-                      ? 'Passwords do not match.'
+                      ? t('setup.passwordMismatch')
                       : undefined
                   }
                 >
@@ -267,20 +271,20 @@ export default function SetupPage() {
                     maxLength={128}
                     autoComplete="new-password"
                     value={values.confirmPassword}
-                    placeholder="Enter password again"
+                    placeholder={t('setup.passwordAgain')}
                     onChange={(event) => updateValue('confirmPassword', event.target.value)}
                   />
                 </FormField>
 
                 <div className="flex flex-col-reverse items-center gap-3 border-t border-border-subtle pt-5 md:col-span-2 sm:flex-row sm:justify-between">
                   <p className="m-0 text-center text-sm text-text-muted sm:text-left">
-                    Already have a workspace?{' '}
+                    {t('setup.haveWorkspace')}{' '}
                     <Link className="font-bold text-brand hover:text-brand-hover" href="/login">
-                      Sign in
+                      {t('auth.signIn')}
                     </Link>
                   </p>
                   <Button type="submit" size="lg" disabled={saving} className="w-full sm:w-auto">
-                    {saving ? 'Creating…' : 'Create workspace'}
+                    {saving ? t('setup.creating') : t('setup.createWorkspace')}
                     {!saving && <ArrowRight size={17} />}
                   </Button>
                 </div>

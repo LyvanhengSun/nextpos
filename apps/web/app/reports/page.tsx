@@ -29,6 +29,7 @@ import {
   SectionCard,
   SummaryMetricCard,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -165,6 +166,20 @@ function ReportListCard({
 }
 
 export default function ReportsPage() {
+  const { t } = useI18n();
+  const builtInExpenseCategories = new Set([
+    'Rent', 'Utilities', 'Delivery', 'Staff meal', 'Supplies', 'Repairs', 'Marketing', 'Other',
+  ]);
+  const expenseCategoryLabel = (value: string) =>
+    builtInExpenseCategories.has(value)
+      ? t(`expenses.category.${value.replace(' ', '')}` as Parameters<typeof t>[0])
+      : value;
+  const paymentMethodLabel = (value: string) => {
+    const supported = new Set(['CASH', 'CARD', 'KHQR', 'BANK', 'BANK_TRANSFER', 'GIFT_CARD']);
+    return supported.has(value)
+      ? t(`reports.payment.${value}` as Parameters<typeof t>[0])
+      : value.replaceAll('_', ' ');
+  };
   const today = isoDate(new Date());
   const [report, setReport] = useState<Report | null>(null);
   const [dailyClose, setDailyClose] = useState<DailyClose | null>(null);
@@ -192,13 +207,13 @@ export default function ReportsPage() {
 
     const data = await readResponse<Report>(response);
     if (!response.ok) {
-      throw new Error(responseMessage(data, 'Unable to load report.'));
+      throw new Error(responseMessage(data, t('reports.error.load')));
     }
 
     const dailyData = await readResponse<DailyClose>(dailyResponse);
     if (!dailyResponse.ok) {
       throw new Error(
-        responseMessage(dailyData, 'Unable to load daily reconciliation.'),
+        responseMessage(dailyData, t('reports.error.daily')),
       );
     }
 
@@ -217,7 +232,7 @@ export default function ReportsPage() {
       await load();
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : 'Unable to load report.',
+        error instanceof Error ? error.message : t('reports.error.load'),
       );
     }
   }
@@ -241,36 +256,36 @@ export default function ReportsPage() {
   function downloadCsv() {
     if (!report) return;
     const rows: string[][] = [
-      ['Profit and loss report', `${from} to ${to}`],
-      ['Completed sales', String(report.transactionCount)],
-      ['Sales total', (report.salesTotal / 100).toFixed(2)],
-      ['Expenses', (report.expenseTotal / 100).toFixed(2)],
-      ['Cost of goods sold', (report.costOfGoodsSold / 100).toFixed(2)],
-      ['Gross profit', (report.grossProfit / 100).toFixed(2)],
-      ['Net profit', (report.netProfit / 100).toFixed(2)],
+      [t('reports.csv.title'), t('reports.csv.period', { from, to })],
+      [t('reports.completedSales'), String(report.transactionCount)],
+      [t('reports.salesTotal'), (report.salesTotal / 100).toFixed(2)],
+      [t('expenses.title'), (report.expenseTotal / 100).toFixed(2)],
+      [t('reports.cogs'), (report.costOfGoodsSold / 100).toFixed(2)],
+      [t('reports.grossProfit'), (report.grossProfit / 100).toFixed(2)],
+      [t('reports.netProfit'), (report.netProfit / 100).toFixed(2)],
       [],
-      ['Expense category', 'Records', 'Total'],
+      [t('reports.expenseCategory'), t('reports.records'), t('supplierInvoices.total')],
       ...report.expenseCategories.map((item) => [
-        item.category,
+        expenseCategoryLabel(item.category),
         String(item.count),
         (item.total / 100).toFixed(2),
       ]),
       [],
-      ['Payment method', 'Transactions', 'Total'],
+      [t('supplierInvoices.paymentMethod'), t('reports.transactions'), t('supplierInvoices.total')],
       ...report.payments.map((item) => [
-        item.method,
+        paymentMethodLabel(item.method),
         String(item.count),
         (item.total / 100).toFixed(2),
       ]),
       [],
-      ['Cashier', 'Transactions', 'Total'],
+      [t('staff.role.CASHIER'), t('reports.transactions'), t('supplierInvoices.total')],
       ...report.cashiers.map((item) => [
         item.name,
         String(item.count),
         (item.total / 100).toFixed(2),
       ]),
       [],
-      ['Product', 'Units sold', 'Product sales'],
+      [t('entity.product'), t('reports.unitsSold'), t('reports.productSales')],
       ...report.topProducts.map((item) => [
         item.name,
         String(item.quantity),
@@ -309,8 +324,8 @@ export default function ReportsPage() {
         report.expenseTotal > 0 ? (item.total / report.expenseTotal) * 100 : 0;
       return {
         id: item.category,
-        title: item.category,
-        subtitle: `${item.count} record${item.count === 1 ? '' : 's'} · ${percent.toFixed(1)}% of expenses`,
+        title: expenseCategoryLabel(item.category),
+        subtitle: t('reports.expenseShare', { count: item.count, percent: percent.toFixed(1) }),
         value: money(item.total),
         icon: <PieChart size={16} />,
       };
@@ -322,8 +337,8 @@ export default function ReportsPage() {
         report.salesTotal > 0 ? (item.total / report.salesTotal) * 100 : 0;
       return {
         id: item.method,
-        title: item.method,
-        subtitle: `${item.count} sale${item.count === 1 ? '' : 's'} · ${percent.toFixed(1)}% share`,
+        title: paymentMethodLabel(item.method),
+        subtitle: t('reports.salesShare', { count: item.count, percent: percent.toFixed(1) }),
         value: money(item.total),
         icon: paymentIcon(item.method),
       };
@@ -336,7 +351,7 @@ export default function ReportsPage() {
       return {
         id: item.name,
         title: item.name,
-        subtitle: `${item.count} sale${item.count === 1 ? '' : 's'} · ${percent.toFixed(1)}% share`,
+        subtitle: t('reports.salesShare', { count: item.count, percent: percent.toFixed(1) }),
         value: money(item.total),
         icon: <User size={16} />,
       };
@@ -344,7 +359,7 @@ export default function ReportsPage() {
 
   return (
     <main className="w-full pb-16">
-      <PageHeading eyebrow="Reports" title="Profit & Loss" />
+      <PageHeading eyebrow={t('reports.eyebrow')} title={t('reports.title')} />
 
       <div>
         <PageContainer>
@@ -354,49 +369,49 @@ export default function ReportsPage() {
             {report && (
               <section
                 className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5"
-                aria-label="Report summary"
+                aria-label={t('reports.summary')}
               >
                 <SummaryMetricCard
                   size="compact"
-                  title="Gross sales"
+                  title={t('reports.grossSales')}
                   value={money(report.salesTotal)}
-                  description="Total revenue generated"
+                  description={t('reports.revenueHelp')}
                   icon={<TrendingUp size={18} />}
                   tone="purple"
                 />
                 <SummaryMetricCard
                   size="compact"
-                  title="Total orders"
+                  title={t('reports.totalOrders')}
                   value={report.transactionCount}
                   description={
                     report.transactionCount
-                      ? `${money(Math.round(report.salesTotal / report.transactionCount))} average`
-                      : 'No transactions'
+                      ? t('reports.average', { amount: money(Math.round(report.salesTotal / report.transactionCount)) })
+                      : t('reports.noTransactions')
                   }
                   icon={<ReceiptText size={18} />}
                   tone="sky"
                 />
                 <SummaryMetricCard
                   size="compact"
-                  title="Branch expenses"
+                  title={t('reports.branchExpenses')}
                   value={money(report.expenseTotal)}
-                  description={`${report.expenseCount} expense record${report.expenseCount === 1 ? '' : 's'}`}
+                  description={t('reports.expenseRecords', { count: report.expenseCount })}
                   icon={<PieChart size={18} />}
                   tone="amber"
                 />
                 <SummaryMetricCard
                   size="compact"
-                  title="Gross profit"
+                  title={t('reports.grossProfit')}
                   value={money(report.grossProfit)}
-                  description="Sales less product costs"
+                  description={t('reports.grossProfitHelp')}
                   icon={<Wallet size={18} />}
                   tone="emerald"
                 />
                 <SummaryMetricCard
                   size="compact"
-                  title="Net profit"
+                  title={t('reports.netProfit')}
                   value={money(report.netProfit)}
-                  description="Gross profit less expenses"
+                  description={t('reports.netProfitHelp')}
                   icon={<BadgePercent size={18} />}
                   tone="purple"
                 />
@@ -410,14 +425,14 @@ export default function ReportsPage() {
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="hidden text-xs font-bold text-text-secondary sm:inline">
-                    Period
+                    {t('supplierPage.period')}
                   </span>
                   <DateRangeControls
                     quickValue={quickValue}
                     quickOptions={[
-                      { value: 'today', label: 'Today' },
-                      { value: 'week', label: 'Last 7 days' },
-                      { value: 'month', label: 'Last 30 days' },
+                      { value: 'today', label: t('expenses.today') },
+                      { value: 'week', label: t('reports.last7') },
+                      { value: 'month', label: t('supplierPage.last30') },
                     ]}
                     onQuickChange={applyPreset}
                     from={from}
@@ -433,7 +448,7 @@ export default function ReportsPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit" variant="secondary">
                     <RefreshCw size={16} />
-                    Apply
+                    {t('reports.apply')}
                   </Button>
                   {report && (
                     <Button
@@ -442,7 +457,7 @@ export default function ReportsPage() {
                       onClick={downloadCsv}
                     >
                       <Download size={16} />
-                      Export CSV
+                      {t('reports.exportCsv')}
                     </Button>
                   )}
                 </div>
@@ -451,24 +466,24 @@ export default function ReportsPage() {
 
             {dailyClose && (
               <SectionCard
-                title="Today’s cash reconciliation"
-                description="Separate from the selected report period."
+                title={t('reports.cashReconciliation')}
+                description={t('reports.cashReconciliationHelp')}
                 actions={
                   <span className="rounded-full border border-brand-border bg-brand-subtle px-2 py-1 text-xs font-bold uppercase tracking-wider text-brand">
-                    Today
+                    {t('expenses.today')}
                   </span>
                 }
               >
                 <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {[
-                    ['Completed sales', money(dailyClose.salesTotal)],
-                    ['Transactions', String(dailyClose.transactionCount)],
+                    [t('reports.completedSales'), money(dailyClose.salesTotal)],
+                    [t('reports.transactions'), String(dailyClose.transactionCount)],
                     [
-                      'Refunds',
+                      t('reports.refunds'),
                       `${dailyClose.refundCount} · ${money(dailyClose.refundTotal)}`,
                     ],
                     [
-                      'Expenses',
+                      t('expenses.title'),
                       `${dailyClose.expenseCount} · ${money(dailyClose.expenseTotal)}`,
                     ],
                   ].map(([label, value]) => (
@@ -488,7 +503,7 @@ export default function ReportsPage() {
 
                 <div className="mt-6">
                   <h3 className="mb-3 text-sm font-bold text-text-secondary">
-                    Closed cash shifts
+                    {t('reports.closedCashShifts')}
                   </h3>
                   {dailyClose.closedShifts.length ? (
                     <div className="overflow-x-auto rounded-lg border border-border-subtle">
@@ -496,11 +511,11 @@ export default function ReportsPage() {
                         <thead>
                           <tr className="border-b border-border-subtle bg-muted-surface">
                             {[
-                              'Cashier',
-                              'Expected',
-                              'Counted',
-                              'Variance',
-                              'Reason',
+                              t('staff.role.CASHIER'),
+                              t('reports.expected'),
+                              t('reports.counted'),
+                              t('reports.variance'),
+                              t('shifts.reason'),
                             ].map((heading) => (
                               <th
                                 key={heading}
@@ -534,7 +549,7 @@ export default function ReportsPage() {
                                 }`}
                               >
                                 {shift.difference === 0
-                                  ? 'Balanced'
+                                  ? t('reports.balanced')
                                   : `${shift.difference > 0 ? '+' : '-'}${money(Math.abs(shift.difference))}`}
                               </td>
                               <td className="px-4 py-4 text-text-secondary">
@@ -547,8 +562,8 @@ export default function ReportsPage() {
                     </div>
                   ) : (
                     <EmptyState
-                      title="No closed cash shifts"
-                      description="Closed shifts from today will appear here."
+                      title={t('shifts.noClosed')}
+                      description={t('reports.noClosedHelp')}
                       icon={<Landmark size={24} />}
                     />
                   )}
@@ -559,33 +574,33 @@ export default function ReportsPage() {
             {report && (
               <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
                 <ReportListCard
-                  title="Expense breakdown"
-                  description="Categories and expense percentage shares."
+                  title={t('reports.expenseBreakdown')}
+                  description={t('reports.expenseBreakdownHelp')}
                   items={expenseItems}
-                  emptyTitle="No expenses"
-                  emptyDescription="No expenses were recorded in this period."
+                  emptyTitle={t('reports.noExpenses')}
+                  emptyDescription={t('reports.noExpensesHelp')}
                   emptyIcon={<PieChart size={24} />}
                 />
                 <ReportListCard
-                  title="Payment breakdown"
-                  description="Sales volume split by payment method."
+                  title={t('reports.paymentBreakdown')}
+                  description={t('reports.paymentBreakdownHelp')}
                   items={paymentItems}
-                  emptyTitle="No payments"
-                  emptyDescription="No sales transactions were recorded in this period."
+                  emptyTitle={t('reports.noPayments')}
+                  emptyDescription={t('reports.noPaymentsHelp')}
                   emptyIcon={<CreditCard size={24} />}
                 />
                 <ReportListCard
-                  title="Cashier performance"
-                  description="Sales contribution per team member."
+                  title={t('reports.cashierPerformance')}
+                  description={t('reports.cashierPerformanceHelp')}
                   items={cashierItems}
-                  emptyTitle="No cashier sales"
-                  emptyDescription="No cashier sales were recorded in this period."
+                  emptyTitle={t('reports.noCashierSales')}
+                  emptyDescription={t('reports.noCashierSalesHelp')}
                   emptyIcon={<Users size={24} />}
                 />
 
                 <SectionCard
-                  title="Best-selling products"
-                  description="Top-performing items by volume and revenue."
+                  title={t('reports.bestProducts')}
+                  description={t('reports.bestProductsHelp')}
                   bodyPadding={false}
                 >
                   {report.topProducts.length ? (
@@ -594,10 +609,10 @@ export default function ReportsPage() {
                         <thead>
                           <tr className="border-b border-border-subtle bg-muted-surface">
                             {[
-                              'Rank',
-                              'Product',
-                              'Units sold',
-                              'Total sales',
+                              t('reports.rank'),
+                              t('entity.product'),
+                              t('reports.unitsSold'),
+                              t('reports.totalSales'),
                             ].map((heading) => (
                               <th
                                 key={heading}
@@ -635,8 +650,8 @@ export default function ReportsPage() {
                     </div>
                   ) : (
                     <EmptyState
-                      title="No products sold"
-                      description="Product sales for this period will appear here."
+                      title={t('reports.noProducts')}
+                      description={t('reports.noProductsHelp')}
                       icon={<PackageSearch size={24} />}
                     />
                   )}

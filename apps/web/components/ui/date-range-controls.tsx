@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from './button';
 import { CustomSelect, type SelectOption } from './custom-select';
+import { useI18n } from '../../lib/i18n';
 
 type DateRangeControlsProps = {
   quickValue: string;
@@ -40,6 +41,7 @@ export function DateRangeControls({
   onRangeChange,
   customActive = false,
 }: DateRangeControlsProps) {
+  const { t } = useI18n();
   const [quickOpen, setQuickOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarTarget, setCalendarTarget] = useState<'from' | 'to'>('from');
@@ -85,10 +87,10 @@ export function DateRangeControls({
 
   const customLabel =
     from || to
-      ? `${from ? formattedDate(from, false) : 'Start'} – ${
-          to ? formattedDate(to, false) : 'End'
+      ? `${from ? formattedDate(from, false) : t('date.start')} – ${
+          to ? formattedDate(to, false) : t('date.end')
         }`
-      : 'Date range';
+      : t('date.range');
   const today = dateKey(new Date());
 
   function selectDate(date: Date) {
@@ -110,7 +112,7 @@ export function DateRangeControls({
       <CustomSelect
         value={quickValue}
         options={quickOptions}
-        placeholder={customActive ? 'Custom' : 'Quick range'}
+        placeholder={customActive ? t('date.custom') : t('date.quickRange')}
         leadingIcon={<CalendarDays size={17} />}
         className="w-36 shrink-0"
         open={quickOpen}
@@ -148,7 +150,7 @@ export function DateRangeControls({
           <div
             className="absolute right-0 top-full z-[110] mt-2 w-72 rounded-lg border border-border-subtle bg-card p-3 shadow-lg"
             role="dialog"
-            aria-label="Custom date range"
+            aria-label={t('date.customRange')}
           >
             <div className="grid gap-2.5">
               <div className="flex items-center justify-between gap-3">
@@ -158,10 +160,10 @@ export function DateRangeControls({
                   </span>
                   <div className="min-w-0">
                     <strong className="block text-xs text-text-main">
-                      Custom date range
+                      {t('date.customRange')}
                     </strong>
                     <small className="mt-0.5 block text-xs text-text-muted">
-                      Choose a start and end date
+                      {t('date.chooseRange')}
                     </small>
                   </div>
                 </div>
@@ -176,7 +178,7 @@ export function DateRangeControls({
                       setCalendarTarget('from');
                     }}
                   >
-                    Clear
+                    {t('common.clear')}
                   </Button>
                 )}
               </div>
@@ -194,9 +196,9 @@ export function DateRangeControls({
                   onClick={() => setCalendarTarget('from')}
                 >
                   <small className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-muted">
-                    From
+                    {t('date.from')}
                   </small>
-                  {from ? formattedDate(from) : 'Select date'}
+                  {from ? formattedDate(from) : t('date.select')}
                 </Button>
                 <span className="text-center text-slate-400">–</span>
                 <Button
@@ -211,9 +213,9 @@ export function DateRangeControls({
                   onClick={() => setCalendarTarget('to')}
                 >
                   <small className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-muted">
-                    To
+                    {t('date.to')}
                   </small>
-                  {to ? formattedDate(to) : 'Select date'}
+                  {to ? formattedDate(to) : t('date.select')}
                 </Button>
               </div>
 
@@ -223,7 +225,7 @@ export function DateRangeControls({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    aria-label="Previous month"
+                    aria-label={t('date.previousMonth')}
                     className="size-8 bg-muted-surface text-text-muted hover:bg-brand-subtle hover:text-brand"
                     onClick={() =>
                       setCalendarMonth(
@@ -248,7 +250,7 @@ export function DateRangeControls({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    aria-label="Next month"
+                    aria-label={t('date.nextMonth')}
                     className="size-8 bg-muted-surface text-text-muted hover:bg-brand-subtle hover:text-brand"
                     onClick={() =>
                       setCalendarMonth(
@@ -266,7 +268,7 @@ export function DateRangeControls({
                 </div>
 
                 <div className="mb-1 grid grid-cols-7 text-center text-[0.58rem] font-bold text-slate-400">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(
+                  {t('date.weekdays').split(',').map(
                     (day) => (
                       <span key={day}>{day}</span>
                     ),

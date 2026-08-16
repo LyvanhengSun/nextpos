@@ -29,6 +29,7 @@ import {
   SummaryMetricCard,
 } from '../../components/ui/';
 import { PageContainer } from '../../components/layout/page-container';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 const salesPageSize = 20;
@@ -132,6 +133,7 @@ async function readJson<T>(response: Response, fallback: T): Promise<T> {
 }
 
 export default function SalesPage() {
+  const { t, locale } = useI18n();
   const [sales, setSales] = useState<Sale[]>([]);
   const [totalSales, setTotalSales] = useState(0);
   const [summary, setSummary] = useState({ totalValue: 0, returnedCount: 0 });
@@ -191,7 +193,7 @@ export default function SalesPage() {
         headers: { Authorization: `Bearer ${token}` },
       }),
     ]);
-    if (!history.ok || !me.ok) throw new Error('Please sign in again.');
+    if (!history.ok || !me.ok) throw new Error(t('sales.error.signIn'));
     const salesHistory = await readJson<SalesHistory>(history, {
       items: [],
       total: 0,
@@ -270,15 +272,15 @@ export default function SalesPage() {
       }))
       .filter((item) => item.quantity > 0);
     if (!items.length) {
-      setMessage('Choose at least one item to return.');
+      setMessage(t('sales.error.chooseItem'));
       return;
     }
     if (reason.trim().length < 3) {
-      setMessage('Enter a return reason with at least 3 characters.');
+      setMessage(t('sales.error.reason'));
       return;
     }
     if (!canRefund && !managerApprovalToken) {
-      setMessage('Manager approval is required before confirming the return.');
+      setMessage(t('sales.error.approvalRequired'));
       return;
     }
     setIsReturning(true);
@@ -304,22 +306,22 @@ export default function SalesPage() {
       try {
         data = raw ? JSON.parse(raw) : {};
       } catch {
-        throw new Error('The return service returned an invalid response.');
+        throw new Error(t('sales.error.invalidResponse'));
       }
       if (!response.ok) {
-        const errorMessage = data.message ?? 'Unable to complete the return.';
+        const errorMessage = data.message ?? t('sales.error.completeReturn');
         if (!canRefund && /approval.*(?:invalid|expired)/i.test(errorMessage)) {
           setManagerApprovalToken('');
           setApprovalPin('');
           setApprovalMessage(
-            'Approval expired. Enter the Manager PIN and approve again.',
+            t('sales.error.approvalExpired'),
           );
         }
         setMessage(errorMessage);
         return;
       }
       const successMessage =
-        data.message ?? 'Return completed. Stock was restored.';
+        data.message ?? t('sales.success.returned');
       const returnedSaleId = returningSale.id;
       setReturningSale(null);
       setReason('');
@@ -344,7 +346,7 @@ export default function SalesPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to complete the return.',
+          : t('sales.error.completeReturn'),
       );
     } finally {
       setIsReturning(false);
@@ -371,15 +373,13 @@ export default function SalesPage() {
       manager?: { firstName: string; lastName: string };
     };
     if (!response.ok || !data.approvalToken) {
-      setApprovalMessage(data.message ?? 'Unable to approve return.');
+      setApprovalMessage(data.message ?? t('sales.error.approveReturn'));
       return;
     }
     setManagerApprovalToken(data.approvalToken);
     setApprovalPin('');
     setApprovalMessage(
-      `Approved by ${data.manager?.firstName ?? 'manager'} ${
-        data.manager?.lastName ?? ''
-      }.`,
+      t('pos.message.approvedBy', { name: `${data.manager?.firstName ?? t('pos.manager')} ${data.manager?.lastName ?? ''}` }),
     );
   }
 
@@ -474,12 +474,12 @@ export default function SalesPage() {
       (quantity) => quantity > 0,
     );
     if (!selectedItems)
-      return setMessage('Choose at least one item to return.');
+      return setMessage(t('sales.error.chooseItem'));
     if (reason.trim().length < 3)
-      return setMessage('Enter a return reason with at least 3 characters.');
+      return setMessage(t('sales.error.reason'));
     if (!canRefund && !managerApprovalToken)
       return setMessage(
-        'Manager approval is required before confirming the return.',
+        t('sales.error.approvalRequired'),
       );
     setMessage('');
     setReturnConfirmationOpen(true);
@@ -487,40 +487,40 @@ export default function SalesPage() {
 
   return (
     <main className="w-full pb-16">
-      <PageHeading eyebrow="Transactions" title="Sales history" />
+      <PageHeading eyebrow={t('sales.transactions')} title={t('sales.history')} />
 
       <div>
         <PageContainer>
           <div className="flex flex-col gap-5">
             <section
               className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3"
-              aria-label="Sales summary"
+              aria-label={t('sales.summary')}
             >
               <SummaryMetricCard
-                title="Transactions"
+                title={t('sales.transactions')}
                 value={visibleSales.length}
                 description={
                   visibleSales.length === 1
-                    ? '1 transaction total'
-                    : `${visibleSales.length} transactions total`
+                    ? t('sales.transactionCount', { count: visibleSales.length })
+                    : t('sales.transactionCountPlural', { count: visibleSales.length })
                 }
                 icon={<ReceiptText size={20} />}
                 tone="purple"
               />
               <SummaryMetricCard
-                title="Sales value"
+                title={t('sales.value')}
                 value={`$${(salesTotal / 100).toFixed(2)}`}
-                description="Total revenue generated"
+                description={t('sales.revenue')}
                 icon={<TrendingUp size={20} />}
                 tone="amber"
               />
               <SummaryMetricCard
-                title="Returns"
+                title={t('sales.returns')}
                 value={returnedCount}
                 description={
                   returnedCount === 1
-                    ? '1 returned transaction'
-                    : `${returnedCount} returned transactions`
+                    ? t('sales.returnCount', { count: returnedCount })
+                    : t('sales.returnCountPlural', { count: returnedCount })
                 }
                 icon={<RotateCcw size={20} />}
                 tone="sky"
@@ -532,10 +532,10 @@ export default function SalesPage() {
                   type="button"
                   variant="overlay"
                   className="absolute inset-0 h-auto w-auto rounded-none p-0"
-                  aria-label="Close return drawer"
+                  aria-label={t('sales.closeReturn')}
                   onClick={closeReturnDrawer}
                 >
-                  <span className="sr-only">Close return drawer</span>
+                  <span className="sr-only">{t('sales.closeReturn')}</span>
                 </Button>
                 <aside
                   className="fixed inset-y-0 right-0 z-[81] flex h-dvh w-full max-w-md flex-col overflow-hidden border-l border-border-subtle bg-card shadow-2xl"
@@ -549,12 +549,12 @@ export default function SalesPage() {
                         id="return-drawer-title"
                         className="m-0 text-xl font-bold leading-tight tracking-tight text-text-main"
                       >
-                        Return sale #{returningSale.id.slice(-6).toUpperCase()}
+                        {t('sales.returnSale', { number: returningSale.id.slice(-6).toUpperCase() })}
                       </h2>
                       <p className="mt-1.5 mb-0 text-[0.78rem] leading-relaxed text-text-muted">
                         {returningSale.branch.name} ·{' '}
                         {new Date(returningSale.createdAt).toLocaleDateString(
-                          undefined,
+                          locale === 'km' ? 'km-KH' : 'en-US',
                           {
                             month: 'short',
                             day: 'numeric',
@@ -568,7 +568,7 @@ export default function SalesPage() {
                       variant="ghost"
                       size="icon"
                       className="shrink-0 text-text-muted hover:text-text-main"
-                      aria-label="Close return drawer"
+                      aria-label={t('sales.closeReturn')}
                       onClick={closeReturnDrawer}
                     >
                       <X size={19} />
@@ -584,7 +584,7 @@ export default function SalesPage() {
                       <div className="grid gap-3">
                         <div className="flex items-baseline justify-between gap-3">
                           <strong className="text-[0.88rem] font-bold text-text-main">
-                            Items to return
+                            {t('sales.itemsToReturn')}
                           </strong>
                         </div>
                         <div className="overflow-hidden rounded-lg border border-border-subtle bg-card">
@@ -604,10 +604,10 @@ export default function SalesPage() {
                                     {item.product.name}
                                   </strong>
                                   <small className="mt-1 block text-[0.72rem] text-text-muted">
-                                    ${(item.unitPrice / 100).toFixed(2)} each ·{' '}
+                                    {t('sales.eachPrice', { amount: `$${(item.unitPrice / 100).toFixed(2)}` })} ·{' '}
                                     {available > 0
-                                      ? `${available} can be returned`
-                                      : 'Already returned'}
+                                      ? t('sales.canReturn', { count: available })
+                                      : t('sales.alreadyReturned')}
                                   </small>
                                 </div>
                                 <div className="flex shrink-0 items-center overflow-hidden rounded-md border border-border-default bg-muted-surface focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10">
@@ -630,7 +630,7 @@ export default function SalesPage() {
                                         ),
                                       }))
                                     }
-                                    aria-label={`Decrease return quantity for ${item.product.name}`}
+                                    aria-label={t('sales.decreaseNamed', { name: item.product.name })}
                                   >
                                     <Minus size={14} />
                                   </Button>
@@ -655,7 +655,7 @@ export default function SalesPage() {
                                       }))
                                     }
                                     className="h-8 w-10 rounded-none border-y-0 px-0 text-center shadow-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                    aria-label={`Return quantity for ${item.product.name}`}
+                                    aria-label={t('sales.quantityNamed', { name: item.product.name })}
                                   />
                                   <Button
                                     type="button"
@@ -676,7 +676,7 @@ export default function SalesPage() {
                                         ),
                                       }))
                                     }
-                                    aria-label={`Increase return quantity for ${item.product.name}`}
+                                    aria-label={t('sales.increaseNamed', { name: item.product.name })}
                                   >
                                     <Plus size={14} />
                                   </Button>
@@ -687,27 +687,27 @@ export default function SalesPage() {
                         </div>
                       </div>
 
-                      <FormField label="Reason for return" required>
+                      <FormField label={t('sales.reason')} required>
                         <Input
                           required
                           minLength={3}
                           disabled={returnConfirmationOpen}
                           value={reason}
                           onChange={(event) => setReason(event.target.value)}
-                          placeholder="Example: customer changed size"
+                          placeholder={t('sales.reasonPlaceholder')}
                         />
                       </FormField>
 
                       {!canRefund && (
                         <div className="grid gap-3 rounded-lg border border-warning-border bg-warning-subtle p-5">
                           <strong className="text-[0.83rem] text-orange-800">
-                            Manager approval
+                            {t('pos.managerApproval')}
                           </strong>
-                          <FormField label="Manager">
+                          <FormField label={t('pos.manager')}>
                             <CustomSelect
                               value={approvalUserId}
                               disabled={returnConfirmationOpen}
-                              placeholder="Select manager"
+                              placeholder={t('pos.selectManager')}
                               options={approvers.map((user) => ({
                                 value: user.id,
                                 label: `${user.firstName} ${user.lastName}`,
@@ -719,7 +719,7 @@ export default function SalesPage() {
                               }}
                             />
                           </FormField>
-                          <FormField label="Manager PIN" required>
+                          <FormField label={t('pos.managerPin')} required>
                             <Input
                               required={!managerApprovalToken}
                               disabled={
@@ -747,7 +747,7 @@ export default function SalesPage() {
                             disabled={returnConfirmationOpen}
                             onClick={() => void approveReturn()}
                           >
-                            Approve return
+                            {t('sales.approveReturn')}
                           </Button>
                           {approvalMessage && (
                             <small className="text-[0.76rem] font-semibold text-orange-800">
@@ -759,7 +759,7 @@ export default function SalesPage() {
 
                       <div className="flex items-center justify-between rounded-lg bg-brand-subtle p-4 text-brand">
                         <span className="text-[0.85rem] font-bold">
-                          Refund total
+                          {t('sales.refundTotal')}
                         </span>
                         <strong className="text-xl font-extrabold">
                           ${(returnTotal / 100).toFixed(2)}
@@ -769,11 +769,10 @@ export default function SalesPage() {
                       {returnConfirmationOpen && (
                         <div className="rounded-lg border border-warning-border bg-warning-subtle p-4 text-orange-800">
                           <strong className="text-[0.85rem]">
-                            Confirm this return?
+                            {t('sales.confirmTitle')}
                           </strong>
                           <p className="mt-1.5 mb-3 text-[0.78rem] leading-relaxed">
-                            This will refund ${(returnTotal / 100).toFixed(2)}{' '}
-                            and add the selected items back to stock.
+                            {t('sales.confirmHelp', { amount: `$${(returnTotal / 100).toFixed(2)}` })}
                           </p>
                           <Button
                             variant="secondary"
@@ -781,7 +780,7 @@ export default function SalesPage() {
                             className="border-orange-300 text-orange-700 hover:bg-orange-50"
                             onClick={() => setReturnConfirmationOpen(false)}
                           >
-                            Edit return
+                            {t('sales.editReturn')}
                           </Button>
                         </div>
                       )}
@@ -797,14 +796,14 @@ export default function SalesPage() {
                         disabled={isReturning}
                         onClick={closeReturnDrawer}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </Button>
                       {!returnConfirmationOpen ? (
                         <Button
                           disabled={isReturning}
                           onClick={openReturnConfirmation}
                         >
-                          Review return
+                          {t('sales.reviewReturn')}
                         </Button>
                       ) : (
                         <>
@@ -813,13 +812,13 @@ export default function SalesPage() {
                             disabled={isReturning}
                             onClick={() => void submitReturn(true)}
                           >
-                            Return &amp; exchange
+                            {t('sales.returnExchange')}
                           </Button>
                           <Button
                             disabled={isReturning}
                             onClick={() => void submitReturn(false)}
                           >
-                            {isReturning ? 'Processing…' : 'Confirm return'}
+                            {isReturning ? t('pos.processing') : t('sales.confirmReturn')}
                           </Button>
                         </>
                       )}
@@ -829,8 +828,8 @@ export default function SalesPage() {
               </div>
             )}
             <SectionCard
-              title="Transactions"
-              description={`${visibleSales.length} of ${totalSales} transactions shown`}
+              title={t('sales.transactions')}
+              description={t('sales.shownCount', { shown: visibleSales.length, total: totalSales })}
               className="overflow-visible"
               headerClassName="max-sm:flex-wrap"
               actionsClassName="max-sm:w-full max-sm:basis-full max-sm:justify-start"
@@ -857,11 +856,11 @@ export default function SalesPage() {
             >
               <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
                 <div className="w-full lg:max-w-sm">
-                  <span className="sr-only">Search sales</span>
+                  <span className="sr-only">{t('sales.search')}</span>
                   <Input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search receipt, product, or branch"
+                    placeholder={t('sales.searchPlaceholder')}
                     prefixIcon={<Search size={16} />}
                   />
                 </div>
@@ -872,7 +871,7 @@ export default function SalesPage() {
                   />
                   <div
                     className="flex items-center gap-1 overflow-x-auto rounded-md bg-muted-surface p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    aria-label="Filter transactions"
+                    aria-label={t('sales.filter')}
                   >
                     {(['all', 'completed', 'returned'] as const).map(
                       (filter) => (
@@ -891,10 +890,10 @@ export default function SalesPage() {
                           }}
                         >
                           {filter === 'all'
-                            ? 'All'
+                            ? t('common.all')
                             : filter === 'completed'
-                              ? 'Completed'
-                              : 'Returned'}
+                              ? t('sales.completed')
+                              : t('sales.returned')}
                         </Button>
                       ),
                     )}
@@ -905,10 +904,10 @@ export default function SalesPage() {
                 <>
                   <div className="w-full">
                     <div className="hidden grid-cols-[40px_minmax(0,1fr)_180px_110px_190px] items-center gap-4 border-b border-border-subtle bg-muted-surface px-8 py-3 text-xs font-bold uppercase tracking-wider text-text-secondary lg:grid">
-                      <span className="col-span-2">Sale</span>
-                      <span>Date</span>
-                      <span className="text-right">Total</span>
-                      <span className="text-right">Actions</span>
+                      <span className="col-span-2">{t('dashboard.sale')}</span>
+                      <span>{t('sales.date')}</span>
+                      <span className="text-right">{t('dashboard.total')}</span>
+                      <span className="text-right">{t('products.actions')}</span>
                     </div>
                     {visibleSales.map((sale) => {
                       const returned =
@@ -927,7 +926,7 @@ export default function SalesPage() {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <strong className="text-[0.9rem] font-bold text-text-main">
-                                Sale #{sale.id.slice(-6).toUpperCase()}
+                                {t('dashboard.saleNumber', { number: sale.id.slice(-6).toUpperCase() })}
                               </strong>
                               <span
                                 className={`rounded-full px-2 py-1 text-[0.68rem] font-bold ${
@@ -936,7 +935,7 @@ export default function SalesPage() {
                                     : 'bg-success-subtle text-success'
                                 }`}
                               >
-                                {returned ? 'Returned' : 'Completed'}
+                                {returned ? t('sales.returned') : t('sales.completed')}
                               </span>
                             </div>
                             <p className="mt-1 mb-0 truncate text-[0.8rem] text-text-secondary">
@@ -949,20 +948,20 @@ export default function SalesPage() {
                             </p>
                             {sale.note ? (
                               <small className="mt-1 block text-[0.75rem] text-text-muted">
-                                Note: {sale.note}
+                                {t('sales.noteNamed', { note: sale.note })}
                               </small>
                             ) : null}
                           </div>
                           <div className="col-start-2 text-sm text-text-secondary lg:col-start-auto">
                             <span className="block">
-                              {saleDate.toLocaleDateString(undefined, {
+                              {saleDate.toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric',
                               })}
                             </span>
                             <small className="mt-1 block text-[0.72rem] text-text-muted">
-                              {saleDate.toLocaleTimeString(undefined, {
+                              {saleDate.toLocaleTimeString(locale === 'km' ? 'km-KH' : 'en-US', {
                                 hour: 'numeric',
                                 minute: '2-digit',
                               })}{' '}
@@ -982,12 +981,10 @@ export default function SalesPage() {
                               href={`/receipt/${sale.id}`}
                               variant="secondary"
                               size="sm"
-                              aria-label={`View receipt for sale ${sale.id.slice(
-                                -6,
-                              )}`}
+                              aria-label={t('sales.viewReceipt', { number: sale.id.slice(-6) })}
                             >
                               <ReceiptText size={17} />
-                              <span>Receipt</span>
+                              <span>{t('pos.receipt')}</span>
                             </ButtonLink>
                             {!sale.refundedAt && (
                               <Button
@@ -1009,7 +1006,7 @@ export default function SalesPage() {
                                 }}
                               >
                                 <RotateCcw size={16} />
-                                <span>Return</span>
+                                <span>{t('sales.returnAction')}</span>
                               </Button>
                             )}
                           </div>
@@ -1020,15 +1017,15 @@ export default function SalesPage() {
                   {pageCount > 1 && (
                     <nav
                       className="flex flex-wrap items-center justify-end gap-2 border-t border-border-subtle px-4 py-3 sm:px-8"
-                      aria-label="Sales pagination"
+                      aria-label={t('sales.pagination')}
                     >
                       <Button
                         type="button"
                         variant="secondary"
                         size="icon"
                         className="size-8"
-                        aria-label="First page"
-                        title="First page"
+                        aria-label={t('sales.firstPage')}
+                        title={t('sales.firstPage')}
                         disabled={page === 1}
                         onClick={() => setPage(1)}
                       >
@@ -1039,8 +1036,8 @@ export default function SalesPage() {
                         variant="secondary"
                         size="icon"
                         className="size-8"
-                        aria-label="Previous page"
-                        title="Previous page"
+                        aria-label={t('sales.previousPage')}
+                        title={t('sales.previousPage')}
                         disabled={page === 1}
                         onClick={() => setPage((current) => current - 1)}
                       >
@@ -1058,7 +1055,7 @@ export default function SalesPage() {
                             variant={item === page ? 'primary' : 'secondary'}
                             size="icon"
                             className="size-8"
-                            aria-label={`Page ${item}`}
+                            aria-label={t('sales.pageNamed', { page: item })}
                             aria-current={item === page ? 'page' : undefined}
                             onClick={() => setPage(item)}
                           >
@@ -1071,8 +1068,8 @@ export default function SalesPage() {
                         variant="secondary"
                         size="icon"
                         className="size-8"
-                        aria-label="Next page"
-                        title="Next page"
+                        aria-label={t('sales.nextPage')}
+                        title={t('sales.nextPage')}
                         disabled={page === pageCount}
                         onClick={() => setPage((current) => current + 1)}
                       >
@@ -1083,8 +1080,8 @@ export default function SalesPage() {
                         variant="secondary"
                         size="icon"
                         className="size-8"
-                        aria-label="Last page"
-                        title="Last page"
+                        aria-label={t('sales.lastPage')}
+                        title={t('sales.lastPage')}
                         disabled={page === pageCount}
                         onClick={() => setPage(pageCount)}
                       >
@@ -1095,8 +1092,8 @@ export default function SalesPage() {
                 </>
               ) : (
                 <EmptyState
-                  title="No matching transactions"
-                  description="Try a different search term or filter."
+                  title={t('sales.empty')}
+                  description={t('sales.emptyHelp')}
                   icon={<Search size={22} />}
                   className="min-h-[225px]"
                 />

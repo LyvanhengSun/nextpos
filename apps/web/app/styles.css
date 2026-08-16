@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Khmer:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @theme {
@@ -141,6 +141,14 @@
 
 html {
   scrollbar-gutter: stable;
+}
+
+html[lang='km'] {
+  font-family:
+    'Noto Sans Khmer',
+    'Inter',
+    system-ui,
+    sans-serif;
 }
 
 body {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from './button';
+import { useI18n } from '../../lib/i18n';
 
 type DatePickerProps = {
   value: string;
@@ -16,8 +17,6 @@ type DatePickerProps = {
   disabled?: boolean;
   className?: string;
 };
-
-const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 function parseLocalDate(value: string) {
   const [year, month, day] = value.split('-').map(Number);
@@ -48,12 +47,15 @@ export function DatePicker({
   onChange,
   name,
   id,
-  placeholder = 'Select date',
+  placeholder,
   min,
   max,
   disabled = false,
   className = '',
 }: DatePickerProps) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t('date.select');
+  const weekDays = t('date.weekdaysShort').split(',');
   const selectedDate = parseLocalDate(value);
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(
@@ -121,7 +123,7 @@ export function DatePicker({
         className={`w-full px-3 ${value ? 'text-text-main' : 'font-normal text-slate-400'}`}
       >
         <span className="min-w-0 flex-1 truncate text-left">
-          {value ? formatDisplayDate(value) : placeholder}
+          {value ? formatDisplayDate(value) : resolvedPlaceholder}
         </span>
         <CalendarDays size={16} className="shrink-0 text-text-muted" />
       </Button>
@@ -131,7 +133,7 @@ export function DatePicker({
       {open && !disabled && (
         <div
           role="dialog"
-          aria-label="Choose date"
+          aria-label={t('date.choose')}
           className="absolute top-[calc(100%+6px)] left-0 z-[120] w-[min(20rem,calc(100vw-2rem))] rounded-lg border border-border-subtle bg-card p-4 shadow-xl sm:right-0 sm:left-auto"
         >
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -139,7 +141,7 @@ export function DatePicker({
               variant="ghost"
               size="icon"
               className="size-8"
-              aria-label="Previous month"
+              aria-label={t('date.previousMonth')}
               onClick={() =>
                 setViewDate(
                   new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1),
@@ -155,7 +157,7 @@ export function DatePicker({
               variant="ghost"
               size="icon"
               className="size-8"
-              aria-label="Next month"
+              aria-label={t('date.nextMonth')}
               onClick={() =>
                 setViewDate(
                   new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1),

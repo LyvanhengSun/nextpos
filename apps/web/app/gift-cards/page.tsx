@@ -25,6 +25,7 @@ import {
   StatusBadge,
   SummaryMetricCard,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -38,6 +39,7 @@ type Card = {
 const money = (value: number) => `$${(value / 100).toFixed(2)}`;
 
 export default function GiftCardsPage() {
+  const { t } = useI18n();
   const [cards, setCards] = useState<Card[]>([]);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
@@ -62,7 +64,7 @@ export default function GiftCardsPage() {
       const response = await fetch(`${api}/gift-cards`, { headers });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.message ?? 'Unable to load gift cards.');
+        throw new Error(data.message ?? t('giftCards.error.load'));
       }
       setCards(Array.isArray(data) ? data : []);
     } finally {
@@ -95,17 +97,17 @@ export default function GiftCardsPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.message ?? 'Unable to create gift card.');
+        throw new Error(data.message ?? t('giftCards.error.create'));
       }
 
       element.reset();
       setIsError(false);
-      setMessage('Gift card created and ready to use in POS.');
+      setMessage(t('giftCards.success.created'));
       await load();
     } catch (error) {
       setIsError(true);
       setMessage(
-        error instanceof Error ? error.message : 'Unable to create gift card.',
+        error instanceof Error ? error.message : t('giftCards.error.create'),
       );
     } finally {
       setIsSaving(false);
@@ -126,7 +128,7 @@ export default function GiftCardsPage() {
 
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Customer credit" title="Gift cards" />
+      <PageHeading eyebrow={t('giftCards.eyebrow')} title={t('giftCards.title')} />
 
       <div>
         <PageContainer>
@@ -141,7 +143,7 @@ export default function GiftCardsPage() {
                   variant="ghost"
                   size="bareIcon"
                   onClick={() => setMessage('')}
-                  aria-label="Dismiss message"
+                  aria-label={t('promotions.dismiss')}
                   className="text-inherit hover:bg-transparent"
                 >
                   <X size={16} />
@@ -155,23 +157,23 @@ export default function GiftCardsPage() {
 
           <section className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
             <SummaryMetricCard
-              title="Customer credit"
+              title={t('giftCards.customerCredit')}
               value={money(balance)}
-              description="Outstanding balance"
+              description={t('supplierInvoices.outstandingBalance')}
               icon={<WalletCards size={20} />}
               tone="purple"
             />
             <SummaryMetricCard
-              title="Active cards"
+              title={t('giftCards.activeCards')}
               value={activeCards}
-              description="Ready at checkout"
+              description={t('giftCards.readyCheckout')}
               icon={<BadgeCheck size={20} />}
               tone="emerald"
             />
             <SummaryMetricCard
-              title="Total cards"
+              title={t('giftCards.totalCards')}
               value={cards.length}
-              description="Issued"
+              description={t('giftCards.issued')}
               icon={<CreditCard size={20} />}
               tone="sky"
             />
@@ -179,23 +181,23 @@ export default function GiftCardsPage() {
 
           <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(19rem,0.72fr)_minmax(0,1.28fr)]">
             <SectionCard
-              title="Create gift card"
-              description="Create store credit."
+              title={t('giftCards.create')}
+              description={t('giftCards.createHelp')}
               icon={<Gift size={20} />}
             >
               <form className="flex flex-col gap-5" onSubmit={create}>
                 <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4">
                   <FormField
                     id="gift-card-code"
-                    label="Gift card code"
+                    label={t('giftCards.code')}
                     required
-                    help="Use a readable code."
+                    help={t('giftCards.codeHelp')}
                   >
                     <Input
                       id="gift-card-code"
                       required
                       name="code"
-                      placeholder="e.g. GIFT-1001"
+                      placeholder={t('giftCards.codePlaceholder')}
                       autoComplete="off"
                       spellCheck={false}
                       onInput={(event) => {
@@ -208,7 +210,7 @@ export default function GiftCardsPage() {
 
                   <FormField
                     id="gift-card-balance"
-                    label="Starting balance"
+                    label={t('giftCards.startingBalance')}
                     required
                     sublabel="(USD)"
                   >
@@ -228,15 +230,15 @@ export default function GiftCardsPage() {
                 <div className="flex justify-end border-t border-border-subtle pt-5">
                   <Button type="submit" disabled={isSaving}>
                     <Plus size={16} />
-                    {isSaving ? 'Creating…' : 'Create gift card'}
+                    {isSaving ? t('branches.creating') : t('giftCards.create')}
                   </Button>
                 </div>
               </form>
             </SectionCard>
 
             <SectionCard
-              title="Gift card balances"
-              description={`${results.length} of ${cards.length} shown.`}
+              title={t('giftCards.balances')}
+              description={t('giftCards.count', { shown: results.length, total: cards.length })}
               actions={
                 <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-muted-strong px-2.5 py-1 text-xs font-bold text-text-secondary">
                   {cards.length}
@@ -249,17 +251,17 @@ export default function GiftCardsPage() {
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search gift card code"
+                  placeholder={t('giftCards.search')}
                   prefixIcon={<Search size={16} />}
-                  aria-label="Search gift cards"
+                  aria-label={t('giftCards.searchLabel')}
                 />
               </div>
 
               {isLoading ? (
                 <EmptyState
                   icon={<CreditCard size={24} />}
-                  title="Loading gift cards"
-                  description="Loading balances."
+                  title={t('giftCards.loading')}
+                  description={t('giftCards.loadingHelp')}
                 />
               ) : results.length ? (
                 <>
@@ -280,7 +282,7 @@ export default function GiftCardsPage() {
                             tone={card.isActive ? 'success' : 'neutral'}
                             className="mt-1"
                           >
-                            {card.isActive ? 'Active' : 'Inactive'}
+                            {card.isActive ? t('common.active') : t('common.inactive')}
                           </StatusBadge>
                         </div>
                         <strong className="shrink-0 text-right text-base font-extrabold text-brand">
@@ -294,10 +296,10 @@ export default function GiftCardsPage() {
                     <table className="w-full min-w-[34rem] border-collapse text-left">
                       <thead>
                         <tr className="border-b border-border-subtle bg-muted-surface text-xs font-bold tracking-wider text-text-secondary uppercase">
-                          <th className="px-4 py-3 sm:pl-8">Gift card</th>
-                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 sm:pl-8">{t('giftCards.giftCard')}</th>
+                          <th className="px-4 py-3">{t('purchaseOrders.status')}</th>
                           <th className="px-4 py-3 text-right sm:pr-8">
-                            Balance
+                            {t('supplierInvoices.balance')}
                           </th>
                         </tr>
                       </thead>
@@ -321,7 +323,7 @@ export default function GiftCardsPage() {
                               <StatusBadge
                                 tone={card.isActive ? 'success' : 'neutral'}
                               >
-                                {card.isActive ? 'Active' : 'Inactive'}
+                                {card.isActive ? t('common.active') : t('common.inactive')}
                               </StatusBadge>
                             </td>
                             <td className="px-4 py-4 text-right font-extrabold whitespace-nowrap text-brand sm:pr-8">
@@ -336,8 +338,8 @@ export default function GiftCardsPage() {
               ) : (
                 <EmptyState
                   icon={<Search size={24} />}
-                  title="No matching gift cards"
-                  description="Try another code."
+                  title={t('giftCards.empty')}
+                  description={t('giftCards.emptyHelp')}
                 />
               )}
             </SectionCard>

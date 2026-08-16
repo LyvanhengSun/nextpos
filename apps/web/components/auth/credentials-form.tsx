@@ -17,17 +17,19 @@ import {
   Button,
   FormField,
   Input,
+  LanguageSwitcher,
   PasswordInput,
   SectionCard,
   Switch,
 } from '@/components/ui';
+import { type TranslationKey, useI18n } from '@/lib/i18n';
 
 const features = [
-  { Icon: ShoppingBag, label: 'Fast checkout' },
-  { Icon: Wifi, label: 'Reliable daily operations' },
-  { Icon: BarChart3, label: 'Clear reports' },
-  { Icon: ShieldCheck, label: 'Role-based access' },
-];
+  { Icon: ShoppingBag, labelKey: 'auth.fastCheckout' },
+  { Icon: Wifi, labelKey: 'auth.reliableOperations' },
+  { Icon: BarChart3, labelKey: 'auth.clearReports' },
+  { Icon: ShieldCheck, labelKey: 'auth.roleAccess' },
+] satisfies { Icon: typeof ShoppingBag; labelKey: TranslationKey }[];
 
 type MessageState = {
   tone: 'success' | 'error';
@@ -35,14 +37,15 @@ type MessageState = {
 };
 
 export function CredentialsForm({
-  title,
+  titleKey,
   endpoint,
-  success,
+  successKey,
 }: {
-  title: string;
+  titleKey: TranslationKey;
   endpoint: 'activate-owner' | 'login';
-  success: string;
+  successKey: TranslationKey;
 }) {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -80,7 +83,7 @@ export function CredentialsForm({
         accessToken?: string;
         message?: string;
       };
-      if (!response.ok) throw new Error(data.message ?? 'Request failed.');
+      if (!response.ok) throw new Error(data.message ?? t('auth.requestFailed'));
 
       if (data.accessToken) {
         sessionStorage.removeItem('pos_access_token');
@@ -99,12 +102,12 @@ export function CredentialsForm({
         return;
       }
 
-      setMessage({ tone: 'success', text: success });
+      setMessage({ tone: 'success', text: t(successKey) });
       setPassword('');
     } catch (error) {
       setMessage({
         tone: 'error',
-        text: error instanceof Error ? error.message : 'Request failed.',
+        text: error instanceof Error ? error.message : t('auth.requestFailed'),
       });
     } finally {
       setLoading(false);
@@ -113,6 +116,9 @@ export function CredentialsForm({
 
   return (
     <main className="min-h-dvh bg-app lg:grid lg:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]">
+      <div className="fixed top-4 right-4 z-20">
+        <LanguageSwitcher />
+      </div>
       <aside className="relative hidden min-h-dvh overflow-hidden bg-text-main px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
 
@@ -123,7 +129,7 @@ export function CredentialsForm({
             </span>
             <div>
               <p className="m-0 text-xs font-bold tracking-widest text-brand-border uppercase">
-                Point of sale
+                {t('auth.pointOfSale')}
               </p>
               <p className="mt-0.5 mb-0 text-lg font-bold">KN POS</p>
             </div>
@@ -131,33 +137,33 @@ export function CredentialsForm({
 
           <div className="mt-20 max-w-md">
             <p className="m-0 text-xs font-bold tracking-widest text-brand-border uppercase">
-              Secure workspace
+              {t('auth.secureWorkspace')}
             </p>
             <h1 className="mt-3 mb-0 text-3xl font-bold leading-tight tracking-tight">
-              Run your store with clarity.
+              {t('auth.runStore')}
             </h1>
             <p className="mt-4 mb-0 text-sm leading-6 text-muted-strong">
-              Sell, manage stock, and track performance.
+              {t('auth.runStoreDescription')}
             </p>
           </div>
 
           <ul className="mt-12 grid list-none gap-4 p-0">
-            {features.map(({ Icon, label }) => (
+            {features.map(({ Icon, labelKey }) => (
               <li
-                key={label}
+                key={labelKey}
                 className="flex items-center gap-3 text-sm font-medium text-muted-surface"
               >
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand/15 text-brand-border">
                   <Icon size={15} />
                 </span>
-                {label}
+                {t(labelKey)}
               </li>
             ))}
           </ul>
         </div>
 
         <p className="relative m-0 text-xs text-border-default">
-          KN POS · Secure business access
+          KN POS · {t('auth.secureAccess')}
         </p>
       </aside>
 
@@ -169,7 +175,7 @@ export function CredentialsForm({
             </span>
             <div>
               <p className="m-0 text-xs font-bold tracking-widest text-brand uppercase">
-                Point of sale
+                {t('auth.pointOfSale')}
               </p>
               <p className="mt-0.5 mb-0 text-base font-bold text-text-main">
                 KN POS
@@ -178,8 +184,8 @@ export function CredentialsForm({
           </div>
 
           <SectionCard
-            title={title}
-            description={isLogin ? 'Access register.' : 'Create owner access.'}
+            title={isLogin ? t('auth.signIn') : t(titleKey)}
+            description={isLogin ? t('auth.accessRegister') : t('auth.createOwnerAccess')}
             icon={<ShieldCheck size={20} />}
           >
             <form className="grid gap-4" onSubmit={submit}>
@@ -198,17 +204,17 @@ export function CredentialsForm({
 
               {!isLogin && (
                 <AlertBanner tone="info" icon={<ShieldCheck size={18} />}>
-                  Use the owner email from setup.
+                  {t('auth.ownerEmailHelp')}
                 </AlertBanner>
               )}
 
-              <FormField id="auth-email" label="Email address" required>
+              <FormField id="auth-email" label={t('auth.email')} required>
                 <Input
                   id="auth-email"
                   required
                   type="email"
                   value={email}
-                  placeholder="you@example.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   autoComplete="email"
                   prefixIcon={<Mail size={16} />}
                   onChange={(event) => setEmail(event.target.value)}
@@ -217,9 +223,9 @@ export function CredentialsForm({
 
               <FormField
                 id="auth-password"
-                label="Password"
+                label={t('auth.password')}
                 required
-                help={!isLogin ? '12+ characters.' : undefined}
+                help={!isLogin ? t('auth.passwordLength') : undefined}
               >
                 <PasswordInput
                   id="auth-password"
@@ -227,7 +233,7 @@ export function CredentialsForm({
                   minLength={12}
                   value={password}
                   placeholder={
-                    isLogin ? 'Password' : '12+ characters'
+                    isLogin ? t('auth.password') : t('auth.passwordLength')
                   }
                   autoComplete={isLogin ? 'current-password' : 'new-password'}
                   onChange={(event) => setPassword(event.target.value)}
@@ -238,16 +244,16 @@ export function CredentialsForm({
                 <div className="flex items-center justify-between gap-4 rounded-md border border-border-subtle bg-muted-surface px-3 py-2.5">
                   <div>
                     <p className="m-0 text-sm font-bold text-text-main">
-                      Remember this device
+                      {t('auth.rememberDevice')}
                     </p>
                     <p className="mt-0.5 mb-0 text-xs text-text-muted">
-                      Stay signed in.
+                      {t('auth.staySignedIn')}
                     </p>
                   </div>
                   <Switch
                     checked={rememberMe}
                     onCheckedChange={setRememberMe}
-                    label="Remember this device"
+                    label={t('auth.rememberDevice')}
                   />
                 </div>
               )}
@@ -259,29 +265,29 @@ export function CredentialsForm({
                 className="mt-1 w-full"
               >
                 {loading
-                  ? 'Processing…'
+                  ? t('auth.processing')
                   : isLogin
-                    ? 'Sign in'
-                    : 'Save password'}
+                    ? t('auth.signIn')
+                    : t('auth.savePassword')}
                 {!loading && <ArrowRight size={17} />}
               </Button>
 
               <p className="m-0 text-center text-sm text-text-muted">
                 {isLogin
-                  ? 'Setting up for the first time?'
-                  : 'Already activated?'}{' '}
+                  ? t('auth.firstSetup')
+                  : t('auth.alreadyActivated')}{' '}
                 <Link
                   className="font-bold text-brand hover:text-brand-hover"
                   href={isLogin ? '/setup' : '/login'}
                 >
-                  {isLogin ? 'Create your business' : 'Sign in'}
+                  {isLogin ? t('auth.createBusiness') : t('auth.signIn')}
                 </Link>
               </p>
             </form>
           </SectionCard>
 
           <p className="mt-5 mb-0 text-center text-xs text-text-muted">
-            Protected by secure role-based access.
+            {t('auth.protectedAccess')}
           </p>
         </div>
       </section>

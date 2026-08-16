@@ -41,6 +41,7 @@ import {
   queuedSaleCount,
   queuedSalesFor,
   removeQueuedSale,
+  useI18n,
 } from '../../lib/';
 import { getDeviceSettings } from '../../lib/';
 import {
@@ -174,6 +175,7 @@ type Promotion = {
 };
 
 export default function PosPage() {
+  const { locale, t } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState('');
@@ -270,7 +272,7 @@ export default function PosPage() {
     const quantity = cart
       .filter((item) => item.name === addedProductName)
       .reduce((sum, item) => sum + item.quantity, 0);
-    setMessage(`${addedProductName} ×${quantity} in cart`);
+    setMessage(t('pos.message.inCart', { name: addedProductName, count: quantity }));
     setAddedProductName('');
   }, [cart, addedProductName]);
   const [unlockUserId, setUnlockUserId] = useState('');
@@ -348,10 +350,10 @@ export default function PosPage() {
           fetch(`${api}/businesses/current/settings`, { headers }),
           fetch(`${api}/promotions/active`, { headers }),
         ]);
-        if (!me.ok) throw new Error('Please sign in again.');
+        if (!me.ok) throw new Error(t('pos.error.signIn'));
         const user = await me.json();
         if (!user.branchId)
-          throw new Error('No branch is assigned to this account.');
+          throw new Error(t('pos.error.noBranch'));
         setBranchId(user.branchId);
         setCashierId(user.id);
         setCanDiscount(user.role === 'OWNER' || user.role === 'MANAGER');
@@ -373,7 +375,7 @@ export default function PosPage() {
           await cacheCatalog(user.branchId, freshProducts);
         } else {
           const cached = await loadCachedCatalog<Product[]>(user.branchId);
-          if (!cached) throw new Error('Unable to load POS products.');
+          if (!cached) throw new Error(t('pos.error.loadProducts'));
           setProducts(cached.products);
         }
         if (customerList.ok) setCustomers(await customerList.json());
@@ -479,11 +481,11 @@ export default function PosPage() {
       setQueuedCount(remaining);
       if (synced)
         setMessage(
-          `${synced} offline sale${synced === 1 ? '' : 's'} synced safely.`,
+          t('pos.message.synced', { count: synced }),
         );
       else if (syncFailed && remaining)
         setMessage(
-          `${remaining} offline sale${remaining === 1 ? '' : 's'} still queued. We will retry automatically.`,
+          t('pos.message.stillQueued', { count: remaining }),
         );
     } finally {
       setSyncing(false);
@@ -647,7 +649,7 @@ export default function PosPage() {
   const cashShortfall = Math.max(0, finalTotal - tenderedCents);
   const changeDue = Math.max(0, tenderedCents - finalTotal);
   const quickCashOptions = [
-    { label: 'Exact', value: (finalTotal / 100).toFixed(2) },
+    { label: t('pos.exact'), value: (finalTotal / 100).toFixed(2) },
     ...[500, 1000, 2000, 5000, 10000].map((denomination) => {
       const amount = Math.ceil(finalTotal / denomination) * denomination;
       return {
@@ -669,7 +671,7 @@ export default function PosPage() {
     const raw = await response.text();
     const data = raw ? JSON.parse(raw) : {};
     setGiftCardBalance(response.ok ? data.balance : null);
-    if (!response.ok) setMessage(data.message ?? 'Gift card not found.');
+    if (!response.ok) setMessage(data.message ?? t('pos.error.giftCardNotFound'));
   }
   function add(
     product: Product,
@@ -733,7 +735,7 @@ export default function PosPage() {
     variant: Product['variants'][number],
   ) {
     if (variant.stockQuantity < 1) {
-      setMessage(`${product.name} — ${variant.name} is out of stock.`);
+      setMessage(t('pos.message.variantOutOfStock', { product: product.name, variant: variant.name }));
       return;
     }
     if (product.modifierGroups.length) {
@@ -745,7 +747,7 @@ export default function PosPage() {
     }
     add(product, [], variant);
     setVariantPicking(null);
-    setMessage(`${product.name} — ${variant.name} added to cart.`);
+    setMessage(t('pos.message.variantAdded', { product: product.name, variant: variant.name }));
     scanInput.current?.focus();
   }
   function toggleOption(group: ModifierGroup, optionId: string) {
@@ -773,7 +775,7 @@ export default function PosPage() {
       ).length;
       if (count < group.minSelections) {
         setMessage(
-          `Choose ${group.minSelections} option(s) for ${group.name}.`,
+          t('pos.message.chooseOptions', { count: group.minSelections, name: group.name }),
         );
         return;
       }
@@ -808,20 +810,20 @@ export default function PosPage() {
     }
     if (!product) {
       setMessage(
-        `Barcode / SKU “${scannedValue}” was not found. Add it in Products or check the label.`,
+        t('pos.message.codeNotFound', { code: scannedValue }),
       );
       return;
     }
     if (product.stockQuantity < 1) {
-      setMessage(`${product.name} is out of stock at this branch.`);
+      setMessage(t('pos.message.productOutOfStock', { name: product.name }));
       return;
     }
     chooseProduct(product);
     setQuery('');
     setMessage(
       product.modifierGroups.length
-        ? `${product.name} found. Choose its required options.`
-        : `${product.name} added to cart.`,
+        ? t('pos.message.productFound', { name: product.name })
+        : t('pos.message.productAdded', { name: product.name }),
     );
     scanInput.current?.focus();
   }
@@ -871,7 +873,7 @@ export default function PosPage() {
     setExchangeDraft(null);
     setReceiptId('');
     sessionStorage.removeItem('pos_exchange_draft');
-    setMessage('Cart cleared.');
+    setMessage(t('pos.message.cartCleared'));
   }
   function openDiscountModal() {
     setDiscountDraft(discount);
@@ -880,7 +882,7 @@ export default function PosPage() {
     setApprovalPin('');
     setApprovalMessage(
       !canDiscount && managerApprovalToken && discount
-        ? 'Discount already approved.'
+        ? t('pos.message.discountApproved')
         : '',
     );
     setShowDiscount(true);
@@ -910,7 +912,7 @@ export default function PosPage() {
         discountTypeDraft === 'PERCENT'
           ? `${discountDraft}%`
           : `$${Number(discountDraft).toFixed(2)}`
-      } discount applied.`,
+      } ${t('pos.message.discountApplied')}`,
     );
   }
   function removeDiscount() {
@@ -923,7 +925,7 @@ export default function PosPage() {
     setApprovalPin('');
     setApprovalMessage('');
     setShowDiscount(false);
-    setMessage('Discount removed.');
+    setMessage(t('pos.message.discountRemoved'));
   }
   function openNoteModal() {
     setNoteDraft(saleNote);
@@ -939,13 +941,13 @@ export default function PosPage() {
     setSaleNote(nextNote);
     setShowNote(false);
     setNoteDraft('');
-    setMessage('Order note added.');
+    setMessage(t('pos.message.noteAdded'));
   }
   function removeOrderNote() {
     setSaleNote('');
     setNoteDraft('');
     setShowNote(false);
-    setMessage('Order note removed.');
+    setMessage(t('pos.message.noteRemoved'));
   }
   function toggleQuickNote(quickNote: string) {
     setNoteDraft((current) => {
@@ -982,9 +984,9 @@ export default function PosPage() {
       nextCustomerId
         ? `${
             customers.find((customer) => customer.id === nextCustomerId)
-              ?.name ?? 'Customer'
-          } selected.`
-        : 'Walk-in customer selected.',
+              ?.name ?? t('entity.customer')
+          } ${t('pos.message.selected')}`
+        : t('pos.message.walkInSelected'),
     );
   }
   async function holdSale() {
@@ -1009,7 +1011,7 @@ export default function PosPage() {
       const raw = await response.text();
       const held = raw ? JSON.parse(raw) : {};
       if (!response.ok) {
-        setMessage(held.message ?? 'Unable to hold this sale.');
+        setMessage(held.message ?? t('pos.error.holdSale'));
         return;
       }
       setHeldSales((current) => [held, ...current]);
@@ -1025,9 +1027,9 @@ export default function PosPage() {
       setNoteDraft('');
       setHoldLabel('');
       setShowHoldSaleModal(false);
-      setMessage(`Saved “${held.label}” as a held sale.`);
+      setMessage(t('pos.message.heldSaved', { label: held.label }));
     } catch {
-      setMessage('Unable to hold this sale. Check your connection.');
+      setMessage(t('pos.error.holdConnection'));
     } finally {
       setIsSavingHeldSale(false);
     }
@@ -1041,7 +1043,7 @@ export default function PosPage() {
         headers,
       });
       if (!response.ok) {
-        setMessage('Unable to resume this held sale.');
+        setMessage(t('pos.error.resumeHeld'));
         return;
       }
       setCart(held.items);
@@ -1057,9 +1059,9 @@ export default function PosPage() {
       setTendered('');
       setHeldSales((current) => current.filter((item) => item.id !== held.id));
       setShowHeldSalesModal(false);
-      setMessage(`Resumed “${held.label}”.`);
+      setMessage(t('pos.message.heldResumed', { label: held.label }));
     } catch {
-      setMessage('Unable to resume this held sale. Check your connection.');
+      setMessage(t('pos.error.resumeConnection'));
     } finally {
       setHeldSaleActionId('');
     }
@@ -1073,22 +1075,22 @@ export default function PosPage() {
         headers,
       });
       if (!response.ok) {
-        setMessage('Unable to delete this held sale.');
+        setMessage(t('pos.error.deleteHeld'));
         return;
       }
       setHeldSales((current) => current.filter((item) => item.id !== held.id));
       setHeldPendingDeletion(null);
       setShowHeldSalesModal(true);
-      setMessage(`Deleted “${held.label}”.`);
+      setMessage(t('pos.message.heldDeleted', { label: held.label }));
     } catch {
-      setMessage('Unable to delete this held sale. Check your connection.');
+      setMessage(t('pos.error.deleteConnection'));
     } finally {
       setHeldSaleActionId('');
     }
   }
   function lockTerminal() {
     if (!terminalUsers.length) {
-      setMessage('Set a 4–8 digit PIN for at least one staff member first.');
+      setMessage(t('pos.error.setPin'));
       return;
     }
     const activeUserId = terminalUsers.some((user) => user.id === cashierId)
@@ -1126,18 +1128,18 @@ export default function PosPage() {
       }>(raw);
       if (!response.ok) {
         setUnlockPin('');
-        setUnlockMessage(data.message ?? 'Incorrect PIN. Try again.');
+        setUnlockMessage(data.message ?? t('pos.error.incorrectPin'));
         return;
       }
       if (!data.accessToken) {
-        setUnlockMessage('The server returned an incomplete unlock response.');
+        setUnlockMessage(t('pos.error.incompleteUnlock'));
         return;
       }
       sessionStorage.setItem('pos_access_token', data.accessToken);
       setTerminalLocked(false);
       window.location.reload();
     } catch {
-      setUnlockMessage('Unable to reach the server. Check the connection.');
+      setUnlockMessage(t('pos.error.serverConnection'));
     } finally {
       setIsUnlocking(false);
     }
@@ -1167,7 +1169,7 @@ export default function PosPage() {
         }
         if (!data.id) {
           setCustomerFormError(
-            'Customer was created, but could not be selected automatically.',
+            t('pos.error.customerNotSelected'),
           );
           return;
         }
@@ -1177,12 +1179,12 @@ export default function PosPage() {
         setNewCustomerName('');
         setNewCustomerPhone('');
         setNewCustomerEmail('');
-        setMessage('Customer created and selected.');
+        setMessage(t('pos.message.customerCreated'));
       } else {
-        setCustomerFormError(data.message ?? 'Failed to create customer.');
+        setCustomerFormError(data.message ?? t('pos.error.createCustomer'));
       }
     } catch {
-      setCustomerFormError('Network error creating customer.');
+      setCustomerFormError(t('pos.error.customerNetwork'));
     } finally {
       setIsCreatingCustomer(false);
     }
@@ -1208,22 +1210,22 @@ export default function PosPage() {
         manager?: { firstName: string; lastName: string };
       }>(raw);
       if (!response.ok) {
-        setApprovalMessage(data.message ?? 'Unable to approve discount.');
+        setApprovalMessage(data.message ?? t('pos.error.approveDiscount'));
         return;
       }
       if (!data.approvalToken || !data.manager) {
         setApprovalMessage(
-          'The server returned an incomplete approval response.',
+          t('pos.error.incompleteApproval'),
         );
         return;
       }
       setDiscountApprovalToken(data.approvalToken);
       setApprovalPin('');
       setApprovalMessage(
-        `Approved by ${data.manager.firstName} ${data.manager.lastName}.`,
+        t('pos.message.approvedBy', { name: `${data.manager.firstName} ${data.manager.lastName}` }),
       );
     } catch {
-      setApprovalMessage('Unable to reach the server for approval.');
+      setApprovalMessage(t('pos.error.approvalConnection'));
     } finally {
       setIsApprovingDiscount(false);
     }
@@ -1234,7 +1236,7 @@ export default function PosPage() {
     );
     if (!isOnline && (paymentMethod !== 'CASH' || exchangeDraft)) {
       setMessage(
-        'Offline checkout supports normal cash sales only. Exchanges need an internet connection.',
+        t('pos.error.offlineCheckout'),
       );
       return false;
     }
@@ -1317,7 +1319,7 @@ export default function PosPage() {
       setExchangeDraft(null);
       sessionStorage.removeItem('pos_exchange_draft');
       setMessage(
-        'Offline cash sale saved on this device. It will sync automatically when online.',
+        t('pos.message.offlineSaved'),
       );
     };
     if (!isOnline) {
@@ -1337,7 +1339,7 @@ export default function PosPage() {
         await finishOfflineSale();
         return true;
       }
-      setMessage('Connection lost before this payment could be completed.');
+      setMessage(t('pos.error.paymentConnection'));
       return false;
     }
     const raw = await response.text();
@@ -1347,14 +1349,14 @@ export default function PosPage() {
       total?: number;
     }>(raw);
     if (!response.ok) {
-      const errorMessage = data.message ?? 'Checkout failed.';
+      const errorMessage = data.message ?? t('pos.error.checkout');
       if (
         managerApprovalToken &&
         errorMessage.toLowerCase().includes('manager approval')
       ) {
         setManagerApprovalToken('');
         setApprovalMessage(
-          'Approval expired. Ask the manager to approve again.',
+          t('pos.error.approvalExpired'),
         );
       }
       setMessage(errorMessage);
@@ -1362,7 +1364,7 @@ export default function PosPage() {
     }
     if (!data.id || typeof data.total !== 'number') {
       setMessage(
-        'Sale may have completed, but the receipt response was incomplete. Check Sales before retrying.',
+        t('pos.error.incompleteReceipt'),
       );
       return false;
     }
@@ -1383,7 +1385,10 @@ export default function PosPage() {
       window.open(`/receipt/${data.id}`, '_blank', 'noopener,noreferrer');
     }
     setMessage(
-      `Sale complete. Receipt ${data.id.slice(-6).toUpperCase()} · $${(data.total / 100).toFixed(2)}`,
+      t('pos.message.saleComplete', {
+        receipt: data.id.slice(-6).toUpperCase(),
+        amount: `$${(data.total / 100).toFixed(2)}`,
+      }),
     );
     return true;
   }
@@ -1408,10 +1413,10 @@ export default function PosPage() {
       <header className="sticky top-0 z-40 flex min-h-14 flex-nowrap items-center justify-between gap-2 border-b border-border-subtle bg-card px-4 py-2 sm:min-h-16 sm:flex-wrap sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
         <div className="flex min-w-0 items-center gap-2 sm:flex-wrap sm:gap-3">
           <span className="hidden rounded-full bg-brand-subtle px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand sm:inline-flex">
-            Cashier POS
+            {t('pos.cashierPos')}
           </span>
           <h1 className="m-0 truncate text-base font-bold tracking-tight text-text-main sm:text-xl">
-            Main Cashier
+            {t('pos.mainCashier')}
           </h1>
           <div
             className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold sm:gap-2 sm:px-3 ${
@@ -1426,12 +1431,12 @@ export default function PosPage() {
               }`}
             />
             <span>
-              {syncing ? 'Syncing…' : isOnline ? 'Online' : 'Offline'}
+              {syncing ? t('pos.syncing') : isOnline ? t('pos.online') : t('pos.offline')}
             </span>
             {queuedCount > 0 && (
               <>
                 <span className="border-l border-current/20 pl-2 tabular-nums">
-                  {queuedCount} queued
+                  {t('pos.queued', { count: queuedCount })}
                 </span>
                 {isOnline && (
                   <Button
@@ -1439,8 +1444,8 @@ export default function PosPage() {
                     size="bareIcon"
                     onClick={() => void syncQueuedSales()}
                     disabled={syncing}
-                    title="Sync queued offline sales now"
-                    aria-label="Sync queued offline sales"
+                    title={t('pos.syncQueuedTitle')}
+                    aria-label={t('pos.syncQueued')}
                     className="border-transparent text-current shadow-none hover:bg-transparent"
                   >
                     <RefreshCw size={14} />
@@ -1453,13 +1458,13 @@ export default function PosPage() {
         <div className="flex shrink-0 items-center gap-2">
           {currentTime && (
             <span className="hidden h-10 items-center rounded-md border border-border-subtle bg-muted-surface px-3 text-xs font-semibold text-text-muted sm:inline-flex">
-              {currentTime.toLocaleDateString('en-US', {
+              {currentTime.toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US', {
                 weekday: 'short',
                 month: 'short',
                 day: 'numeric',
               })}
               {' · '}
-              {currentTime.toLocaleTimeString('en-US', {
+              {currentTime.toLocaleTimeString(locale === 'km' ? 'km-KH' : 'en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
@@ -1469,12 +1474,12 @@ export default function PosPage() {
             variant="secondary"
             size="icon"
             className="h-9 w-9 p-0 sm:h-10 sm:w-auto sm:px-4 sm:text-[0.86rem]"
-            title="Lock terminal"
-            aria-label="Lock terminal"
+            title={t('pos.lockTerminal')}
+            aria-label={t('pos.lockTerminal')}
             onClick={lockTerminal}
           >
             <LockKeyhole className="h-4 w-4 shrink-0" strokeWidth={2.25} />
-            <span className="hidden sm:inline">Lock terminal</span>
+            <span className="hidden sm:inline">{t('pos.lockTerminal')}</span>
           </Button>
         </div>
       </header>
@@ -1484,7 +1489,7 @@ export default function PosPage() {
           tone="info"
           className="mx-4 mt-4 sm:mx-6 lg:mx-8"
           title={`Exchange credit: $${(exchangeCredit / 100).toFixed(2)}`}
-          description="Add replacement products. The credit is applied at checkout."
+          description={t('pos.exchangeDescription')}
           action={
             <Button
               variant="ghost"
@@ -1494,14 +1499,14 @@ export default function PosPage() {
                 sessionStorage.removeItem('pos_exchange_draft');
               }}
             >
-              Cancel exchange
+              {t('pos.cancelExchange')}
             </Button>
           }
         />
       )}
       {configuring && (
         <Modal
-          title={`Customize ${configuring.name}${
+          title={`${t('pos.customize')} ${configuring.name}${
             configuringVariant ? ` · ${configuringVariant.name}` : ''
           }`}
           density="compactNarrow"
@@ -1510,7 +1515,7 @@ export default function PosPage() {
               ? `${configuringVariant.stockQuantity} in stock · $${(
                   (configuringVariant.price ?? configuring.price) / 100
                 ).toFixed(2)}`
-              : 'Choose any required and optional add-ons.'
+              : t('pos.chooseAddOns')
           }
           onClose={() => {
             setConfiguring(null);
@@ -1526,9 +1531,9 @@ export default function PosPage() {
                   setConfiguringVariant(null);
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
-              <Button onClick={addConfigured}>Add to cart</Button>
+              <Button onClick={addConfigured}>{t('pos.addToCart')}</Button>
             </>
           }
         >
@@ -1563,7 +1568,7 @@ export default function PosPage() {
                         </span>
                       ) : (
                         <span className="shrink-0 text-xs text-text-muted">
-                          Included
+                          {t('pos.included')}
                         </span>
                       )}
                     </Button>
@@ -1577,7 +1582,7 @@ export default function PosPage() {
       {variantPicking && (
         <Modal
           title={variantPicking.name}
-          description="Choose an available option."
+          description={t('pos.chooseAvailableOption')}
           onClose={() => setVariantPicking(null)}
           size="xl"
           density="compactNarrow"
@@ -1696,7 +1701,7 @@ export default function PosPage() {
                   <div>
                     <nav
                       className="mb-4 flex items-center gap-7 overflow-x-auto overflow-y-hidden border-b border-border-subtle [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                      aria-label="Product colors"
+                      aria-label={t('pos.productColors')}
                       role="tablist"
                     >
                       {columnGroup.map((group) => {
@@ -1758,7 +1763,7 @@ export default function PosPage() {
         <Modal
           title={`Remove ${linePendingRemoval.name}?`}
           density="compactNarrow"
-          description="This item will be removed from the current sale."
+          description={t('pos.removeItemDescription')}
           icon={<Trash2 size={20} />}
           onClose={() => setLinePendingRemoval(null)}
           size="sm"
@@ -1769,7 +1774,7 @@ export default function PosPage() {
                 variant="secondary"
                 onClick={() => setLinePendingRemoval(null)}
               >
-                Keep item
+                {t('pos.keepItem')}
               </Button>
               <Button
                 variant="danger"
@@ -1779,7 +1784,7 @@ export default function PosPage() {
                 }}
               >
                 <Trash2 size={16} />
-                Remove item
+                {t('pos.removeItem')}
               </Button>
             </>
           }
@@ -1800,7 +1805,7 @@ export default function PosPage() {
               )}
               {linePendingRemoval.note && (
                 <span className="rounded-full bg-muted-surface px-2 py-1 text-xs font-semibold text-text-secondary">
-                  Note added
+                  {t('pos.noteAdded')}
                 </span>
               )}
             </div>
@@ -1809,9 +1814,9 @@ export default function PosPage() {
       )}
       {showNote && (
         <Modal
-          title="Order note"
+          title={t('pos.orderNote')}
           density="compactNarrow"
-          description="Add instructions for this sale."
+          description={t('pos.orderNoteHelp')}
           icon={<MessageSquareText size={20} />}
           onClose={closeNoteModal}
           size="sm"
@@ -1823,21 +1828,25 @@ export default function PosPage() {
                   className="mr-auto"
                   onClick={removeOrderNote}
                 >
-                  Remove note
+                  {t('pos.removeNote')}
                 </Button>
               )}
               <Button disabled={!noteDraft.trim()} onClick={applyOrderNote}>
-                Apply note
+                {t('pos.applyNote')}
               </Button>
             </>
           }
         >
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-              Quick notes
+              {t('pos.quickNotes')}
             </span>
             <div className="mt-2 flex flex-wrap gap-2">
-              {['Pickup', 'Delivery', 'Urgent'].map((quickNote) => {
+              {[
+                ['Pickup', t('pos.notePickup')],
+                ['Delivery', t('pos.noteDelivery')],
+                ['Urgent', t('pos.noteUrgent')],
+              ].map(([quickNote, quickNoteLabel]) => {
                 const isSelected = noteDraft
                   .split(' · ')
                   .map((part) => part.trim())
@@ -1850,7 +1859,7 @@ export default function PosPage() {
                     aria-pressed={isSelected}
                     onClick={() => toggleQuickNote(quickNote)}
                   >
-                    {quickNote}
+                    {quickNoteLabel}
                   </Button>
                 );
               })}
@@ -1859,7 +1868,7 @@ export default function PosPage() {
 
           <FormField
             className="mt-4"
-            label="Note"
+            label={t('pos.note')}
             sublabel={`${noteDraft.length}/500`}
           >
             <Textarea
@@ -1867,7 +1876,7 @@ export default function PosPage() {
               rows={4}
               maxLength={500}
               value={noteDraft}
-              placeholder="Example: customer will pick up at 5 PM"
+              placeholder={t('pos.notePlaceholder')}
               onChange={(event) => setNoteDraft(event.target.value)}
             />
           </FormField>
@@ -1875,9 +1884,9 @@ export default function PosPage() {
       )}
       {showDiscount && (
         <Modal
-          title="Apply discount"
+          title={t('pos.applyDiscount')}
           density="compactNarrow"
-          description="Review the discount before applying it."
+          description={t('pos.discountHelp')}
           icon={<BadgePercent size={20} />}
           onClose={closeDiscountModal}
           size="md"
@@ -1889,7 +1898,7 @@ export default function PosPage() {
                   className="mr-auto"
                   onClick={removeDiscount}
                 >
-                  Remove discount
+                  {t('pos.removeDiscount')}
                 </Button>
               )}
               <Button
@@ -1900,7 +1909,7 @@ export default function PosPage() {
                 }
                 onClick={applyDiscount}
               >
-                Apply discount
+                {t('pos.applyDiscount')}
               </Button>
             </>
           }
@@ -1919,7 +1928,7 @@ export default function PosPage() {
                 setApprovalMessage('');
               }}
             >
-              $ Fixed
+              $ {t('pos.fixed')}
             </Button>
             <Button
               variant={
@@ -1934,14 +1943,14 @@ export default function PosPage() {
                 setApprovalMessage('');
               }}
             >
-              % Percentage
+              % {t('pos.percentage')}
             </Button>
           </div>
 
           <FormField
             className="mt-4"
-            label="Discount amount"
-            help={!canDiscount ? 'Manager approval required.' : undefined}
+            label={t('pos.discountAmount')}
+            help={!canDiscount ? t('pos.managerApprovalRequired') : undefined}
           >
             <NumericKeypad
               autoFocus
@@ -1964,7 +1973,7 @@ export default function PosPage() {
             <AlertBanner
               tone="error"
               className="mt-3"
-              title="Discount is too high"
+              title={t('pos.discountTooHigh')}
               description={`Maximum available discount is $${(
                 Math.max(0, total - promotionDiscountTotal) / 100
               ).toFixed(2)}.`}
@@ -1973,35 +1982,35 @@ export default function PosPage() {
 
           <div className="mt-4 rounded-lg border border-border-subtle bg-muted-surface p-4 text-sm">
             <div className="flex items-center justify-between gap-4 text-text-muted">
-              <span>Subtotal</span>
+              <span>{t('pos.subtotal')}</span>
               <span className="font-semibold tabular-nums text-text-secondary">
                 ${(total / 100).toFixed(2)}
               </span>
             </div>
             {promotionDiscountTotal > 0 && (
               <div className="mt-2 flex items-center justify-between gap-4 text-emerald-700">
-                <span>Promotion</span>
+                <span>{t('pos.promotion')}</span>
                 <span className="font-semibold tabular-nums">
                   -${(promotionDiscountTotal / 100).toFixed(2)}
                 </span>
               </div>
             )}
             <div className="mt-2 flex items-center justify-between gap-4 text-rose-600">
-              <span>Discount</span>
+              <span>{t('pos.discount')}</span>
               <span className="font-semibold tabular-nums">
                 -${(draftManualDiscountTotal / 100).toFixed(2)}
               </span>
             </div>
             {draftTaxTotal > 0 && (
               <div className="mt-2 flex items-center justify-between gap-4 text-text-muted">
-                <span>Tax</span>
+                <span>{t('pos.taxLabel')}</span>
                 <span className="font-semibold tabular-nums text-text-secondary">
                   ${(draftTaxTotal / 100).toFixed(2)}
                 </span>
               </div>
             )}
             <div className="mt-3 flex items-center justify-between gap-4 border-t border-border-subtle pt-3">
-              <strong className="font-bold text-text-main">New total</strong>
+              <strong className="font-bold text-text-main">{t('pos.newTotal')}</strong>
               <strong className="text-lg font-bold tabular-nums text-brand">
                 ${(draftFinalTotal / 100).toFixed(2)}
               </strong>
@@ -2016,10 +2025,10 @@ export default function PosPage() {
                 onSubmit={approveDiscount}
               >
                 <strong className="text-sm font-bold text-text-main">
-                  Manager approval
+                  {t('pos.managerApproval')}
                 </strong>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <FormField label="Manager" required>
+                  <FormField label={t('pos.manager')} required>
                     <CustomSelect
                       value={approvalUserId}
                       onChange={setApprovalUserId}
@@ -2028,11 +2037,11 @@ export default function PosPage() {
                         label: `${user.firstName} ${user.lastName}`,
                         sublabel: user.role,
                       }))}
-                      placeholder="Select manager"
+                      placeholder={t('pos.selectManager')}
                       placement="top"
                     />
                   </FormField>
-                  <FormField label="Manager PIN" required>
+                  <FormField label={t('pos.managerPin')} required>
                     <PasswordInput
                       required
                       value={approvalPin}
@@ -2060,10 +2069,10 @@ export default function PosPage() {
                   {isApprovingDiscount ? (
                     <>
                       <RefreshCw size={15} className="animate-spin" />
-                      Approving…
+                      {t('pos.approving')}
                     </>
                   ) : (
-                    'Approve discount'
+                    t('pos.approveDiscount')
                   )}
                 </Button>
                 {approvalMessage && (
@@ -2079,8 +2088,8 @@ export default function PosPage() {
               tone="success"
               className="mt-4"
               icon={<CircleCheck size={16} />}
-              title="Manager approved"
-              description={approvalMessage || 'This discount can be applied.'}
+              title={t('pos.managerApproved')}
+              description={approvalMessage || t('pos.discountCanApply')}
             />
           )}
         </Modal>
@@ -2099,14 +2108,14 @@ export default function PosPage() {
 
           return (
             <Modal
-              title="Edit quantity"
+              title={t('pos.editQuantity')}
               density="compactNarrow"
               description={quantityEditingLine.name}
               onClose={closeQuantityEditor}
               size="sm"
               footer={
                 <Button disabled={!isValid} onClick={updateQuantity}>
-                  Update quantity
+                  {t('pos.updateQuantity')}
                 </Button>
               }
             >
@@ -2120,7 +2129,7 @@ export default function PosPage() {
               />
               <div className="mt-3 flex items-center justify-between gap-4 text-xs">
                 <span className="font-medium text-text-muted">
-                  Available stock
+                  {t('pos.availableStock')}
                 </span>
                 <strong className="font-bold tabular-nums text-text-main">
                   {quantityEditingLine.availableQuantity}
@@ -2138,9 +2147,9 @@ export default function PosPage() {
         })()}
       {showHoldSaleModal && (
         <Modal
-          title="Hold current sale"
+          title={t('pos.holdCurrentSale')}
           density="compactNarrow"
-          description="Save this cart and resume it later."
+          description={t('pos.holdHelp')}
           icon={<Clock3 size={20} />}
           onClose={() => {
             if (!isSavingHeldSale) setShowHoldSaleModal(false);
@@ -2154,32 +2163,32 @@ export default function PosPage() {
               {isSavingHeldSale ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
-                  Saving…
+                  {t('common.saving')}
                 </>
               ) : (
-                'Hold sale'
+                t('pos.holdSale')
               )}
             </Button>
           }
         >
-          <FormField label="Reference" sublabel="(optional)">
+          <FormField label={t('pos.reference')} sublabel={t('common.optional')}>
             <Input
               autoFocus
               maxLength={80}
               value={holdLabel}
-              placeholder="Customer name or order reference"
+              placeholder={t('pos.referencePlaceholder')}
               onChange={(event) => setHoldLabel(event.target.value)}
             />
           </FormField>
           <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-border-subtle bg-muted-surface p-4">
             <div>
-              <span className="text-xs font-medium text-text-muted">Items</span>
+              <span className="text-xs font-medium text-text-muted">{t('pos.itemsLabel')}</span>
               <strong className="mt-1 block text-sm font-bold tabular-nums text-text-main">
                 {cart.reduce((sum, line) => sum + line.quantity, 0)}
               </strong>
             </div>
             <div className="text-right">
-              <span className="text-xs font-medium text-text-muted">Total</span>
+              <span className="text-xs font-medium text-text-muted">{t('dashboard.total')}</span>
               <strong className="mt-1 block text-sm font-bold tabular-nums text-text-main">
                 ${(finalTotal / 100).toFixed(2)}
               </strong>
@@ -2189,7 +2198,7 @@ export default function PosPage() {
       )}
       {showHeldSalesModal && (
         <Modal
-          title="Held sales"
+          title={t('pos.heldSales')}
           density="compactNarrow"
           description={`${heldSales.length} ${heldSales.length === 1 ? 'sale' : 'sales'} waiting`}
           icon={<Clock3 size={20} />}
@@ -2199,16 +2208,16 @@ export default function PosPage() {
           {cart.length > 0 && heldSales.length > 0 && (
             <AlertBanner
               tone="warning"
-              title="Current cart is active"
-              description="Hold or clear the current cart before resuming another sale."
+              title={t('pos.currentCartActive')}
+              description={t('pos.currentCartHelp')}
               className="mb-4"
             />
           )}
           {heldSales.length === 0 ? (
             <EmptyState
               icon={<Clock3 size={24} />}
-              title="No held sales"
-              description="Held carts will appear here."
+              title={t('pos.noHeldSales')}
+              description={t('pos.noHeldSalesHelp')}
             />
           ) : (
             <div className="grid grid-cols-1 gap-3">
@@ -2248,7 +2257,7 @@ export default function PosPage() {
                           {held.label}
                         </strong>
                         <p className="mt-1 truncate text-xs text-text-muted">
-                          {heldCustomer?.name ?? 'Walk-in customer'} · saved{' '}
+                          {heldCustomer?.name ?? t('pos.walkIn')} · {t('pos.saved')}{' '}
                           {savedAt}
                         </p>
                       </div>
@@ -2265,12 +2274,12 @@ export default function PosPage() {
                         )
                         .join(', ')}
                       {held.items.length > 3
-                        ? `, +${held.items.length - 3} more`
+                        ? `, ${t('pos.moreCount', { count: held.items.length - 3 })}`
                         : ''}
                     </p>
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-3">
                       <span className="text-xs text-text-muted">
-                        {itemCount} {itemCount === 1 ? 'item' : 'items'} ·{' '}
+                        {t('pos.itemCount', { count: itemCount })} ·{' '}
                         {held.cashier.firstName} {held.cashier.lastName}
                       </span>
                       <div className="flex items-center gap-3">
@@ -2279,7 +2288,7 @@ export default function PosPage() {
                           size="icon"
                           disabled={Boolean(heldSaleActionId)}
                           aria-label={`Delete ${held.label}`}
-                          title="Delete held sale"
+                          title={t('pos.deleteHeldSale')}
                           onClick={() => {
                             setShowHeldSalesModal(false);
                             setHeldPendingDeletion(held);
@@ -2300,8 +2309,8 @@ export default function PosPage() {
                             <Play size={16} />
                           )}
                           {heldSaleActionId === held.id
-                            ? 'Resuming…'
-                            : 'Resume'}
+                            ? t('pos.resuming')
+                            : t('pos.resume')}
                         </Button>
                       </div>
                     </div>
@@ -2314,9 +2323,9 @@ export default function PosPage() {
       )}
       {heldPendingDeletion && (
         <Modal
-          title={`Delete ${heldPendingDeletion.label}?`}
+          title={t('pos.deleteNamedHeld', { name: heldPendingDeletion.label })}
           density="compactNarrow"
-          description="This held sale cannot be recovered."
+          description={t('pos.deleteHeldHelp')}
           icon={<Trash2 size={20} />}
           onClose={() => {
             if (heldSaleActionId) return;
@@ -2335,12 +2344,12 @@ export default function PosPage() {
               ) : (
                 <Trash2 size={16} />
               )}
-              {heldSaleActionId ? 'Deleting…' : 'Delete held sale'}
+              {heldSaleActionId ? t('common.deleting') : t('pos.deleteHeldSale')}
             </Button>
           }
         >
           <p className="text-sm leading-6 text-text-secondary">
-            Resume the sale instead if the customer may return.
+            {t('pos.resumeInstead')}
           </p>
         </Modal>
       )}
@@ -2350,14 +2359,14 @@ export default function PosPage() {
         >
           <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <h2 className="m-0 hidden text-xl font-bold tracking-tight text-text-main sm:block">
-              All Products
+              {t('pos.allProducts')}
             </h2>
             <div className="flex w-full items-center gap-2 xl:max-w-xl">
               <Input
                 ref={scanInput}
-                aria-label="Search products"
+                aria-label={t('pos.searchProducts')}
                 autoFocus
-                placeholder="Search products, SKU..."
+                placeholder={t('pos.searchProducts')}
                 value={query}
                 prefixIcon={<Search size={16} />}
                 wrapperClassName="flex-1"
@@ -2375,8 +2384,8 @@ export default function PosPage() {
                     setQuery('');
                     scanInput.current?.focus();
                   }}
-                  title="Clear search"
-                  aria-label="Clear search"
+                  title={t('pos.clearSearch')}
+                  aria-label={t('pos.clearSearch')}
                 >
                   <X size={16} />
                 </Button>
@@ -2384,10 +2393,10 @@ export default function PosPage() {
               <Button
                 variant="secondary"
                 onClick={() => scanInput.current?.focus()}
-                title="Focus barcode scanner input"
+                title={t('pos.focusScanner')}
               >
                 <Scan size={16} />
-                <span>Scan</span>
+                <span>{t('pos.scan')}</span>
               </Button>
             </div>
           </div>
@@ -2397,7 +2406,7 @@ export default function PosPage() {
               icon={<CircleAlert size={17} />}
               className="mb-4"
             >
-              Offline — cash sales will sync automatically.
+              {t('pos.offlineCashSync')}
             </AlertBanner>
           )}
           {categories.length > 0 && (
@@ -2408,7 +2417,7 @@ export default function PosPage() {
                 className="shrink-0"
                 onClick={() => setSelectedCategoryId('')}
               >
-                All
+                {t('common.all')}
               </Button>
               {categories.map((category) => (
                 <Button
@@ -2453,16 +2462,16 @@ export default function PosPage() {
                       aria-hidden="true"
                     >
                       <ImageOff size={24} strokeWidth={1.8} />
-                      <span>No image</span>
+                      <span>{t('pos.noImage')}</span>
                     </span>
                   )}
                   {product.stockQuantity < 1 ? (
                     <span className="absolute top-2 right-2 rounded-full bg-rose-600 px-2 py-1 text-[0.68rem] font-bold text-white">
-                      Sold out
+                      {t('pos.soldOut')}
                     </span>
                   ) : product.stockQuantity <= 5 ? (
                     <span className="absolute top-2 right-2 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[0.68rem] font-bold text-amber-700">
-                      {product.stockQuantity} left
+                      {t('pos.left', { count: product.stockQuantity })}
                     </span>
                   ) : null}
                 </span>
@@ -2485,8 +2494,8 @@ export default function PosPage() {
                     product.modifierGroups.length > 0) && (
                     <span className="shrink-0 text-[0.65rem] font-bold text-brand">
                       {product.variants.length > 0
-                        ? `${product.variants.length} Options`
-                        : 'Custom'}
+                        ? t('pos.options', { count: product.variants.length })
+                        : t('pos.custom')}
                     </span>
                   )}
                 </span>
@@ -2496,8 +2505,8 @@ export default function PosPage() {
               <div className="col-span-full rounded-lg border border-border-subtle bg-card">
                 <EmptyState
                   icon={<Search size={24} />}
-                  title="No products found"
-                  description="Try another search or category."
+                  title={t('pos.noProducts')}
+                  description={t('pos.trySearch')}
                 />
               </div>
             )}
@@ -2516,10 +2525,9 @@ export default function PosPage() {
           >
             <span className="flex items-center gap-2">
               <ShoppingCart size={18} />
-              <span>Cart</span>
+              <span>{t('pos.cart')}</span>
               <span className="font-medium">
-                · {securedCartQuantity} item
-                {securedCartQuantity === 1 ? '' : 's'}
+                · {t('pos.items', { count: securedCartQuantity })}
               </span>
             </span>
             <span className="tabular-nums">
@@ -2537,8 +2545,8 @@ export default function PosPage() {
                 variant="ghost"
                 size="icon"
                 className="h-9 w-9 shrink-0 p-0 sm:hidden"
-                aria-label="Back to products"
-                title="Back to products"
+                aria-label={t('pos.backProducts')}
+                title={t('pos.backProducts')}
                 onClick={() => {
                   setMobileView('products');
                   window.scrollTo({ top: 0 });
@@ -2547,7 +2555,7 @@ export default function PosPage() {
                 <ArrowLeft size={18} />
               </Button>
               <h2 className="m-0 truncate text-base font-bold tracking-tight text-text-main sm:text-xl">
-                Cart
+                {t('pos.cart')}
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -2557,7 +2565,7 @@ export default function PosPage() {
                 onClick={() => setShowHeldSalesModal(true)}
               >
                 <Clock3 size={15} />
-                Held {heldSales.length}
+                {t('pos.held', { count: heldSales.length })}
               </Button>
               <Button
                 variant="ghost"
@@ -2566,7 +2574,7 @@ export default function PosPage() {
                 disabled={!mounted || !cart.length}
                 onClick={clearCurrentSale}
               >
-                Clear
+                {t('pos.clear')}
               </Button>
             </div>
           </div>
@@ -2631,7 +2639,7 @@ export default function PosPage() {
                       variant="quantityValue"
                       size="quantityValue"
                       aria-label={`Set ${line.name} quantity`}
-                      title="Enter exact quantity"
+                      title={t('pos.enterQuantity')}
                       onClick={() => {
                         setQuantityEditingLine(line);
                         setQuantityDraft(String(line.quantity));
@@ -2669,7 +2677,7 @@ export default function PosPage() {
                     size="bareIcon"
                     className="self-center border-transparent text-slate-400 shadow-none hover:bg-transparent hover:text-rose-600"
                     aria-label={`Remove ${line.name} from cart`}
-                    title="Remove item"
+                    title={t('pos.removeItem')}
                     onClick={() => setLinePendingRemoval(line)}
                   >
                     <Trash2 size={16} />
@@ -2681,7 +2689,7 @@ export default function PosPage() {
                         autoFocus
                         maxLength={300}
                         value={line.note ?? ''}
-                        placeholder="Add note (e.g., no sugar)"
+                        placeholder={t('pos.lineNotePlaceholder')}
                         onBlur={() => setEditingNoteKey(null)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') setEditingNoteKey(null);
@@ -2704,8 +2712,8 @@ export default function PosPage() {
               <EmptyState
                 className="min-h-72"
                 icon={<ShoppingCart size={32} strokeWidth={1.6} />}
-                title="Cart is empty"
-                description="Choose a product to start this sale."
+                title={t('pos.emptyCart')}
+                description={t('pos.chooseProduct')}
               />
             )}
           </div>
@@ -2713,7 +2721,7 @@ export default function PosPage() {
           <div className="relative z-20 shrink-0 border-t border-border-subtle bg-card shadow-lg sm:sticky sm:bottom-0">
             <div className="px-4 pt-4 sm:px-6">
               <div className="flex items-center justify-between text-xs text-text-muted">
-                <span>Subtotal</span>
+                <span>{t('pos.subtotal')}</span>
                 <b className="font-bold tabular-nums text-text-secondary">
                   ${(total / 100).toFixed(2)}
                 </b>
@@ -2721,21 +2729,21 @@ export default function PosPage() {
 
               {activePromotion ? (
                 <div className="mt-2 flex items-center justify-between text-xs font-semibold text-emerald-700">
-                  <span>Offer: {activePromotion.name}</span>
+                  <span>{t('pos.offer', { name: activePromotion.name })}</span>
                   <span>-${(promotionDiscountTotal / 100).toFixed(2)}</span>
                 </div>
               ) : null}
 
               {manualDiscountTotal > 0 && (
                 <div className="mt-2 flex items-center justify-between text-xs font-semibold text-rose-600">
-                  <span>Discount</span>
+                  <span>{t('pos.discount')}</span>
                   <span>-${(manualDiscountTotal / 100).toFixed(2)}</span>
                 </div>
               )}
 
               {taxRateBasisPoints > 0 && (
                 <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
-                  <span>Tax ({(taxRateBasisPoints / 100).toFixed(2)}%)</span>
+                  <span>{t('pos.tax', { rate: (taxRateBasisPoints / 100).toFixed(2) })}</span>
                   <b className="font-bold tabular-nums text-text-secondary">
                     ${(taxTotal / 100).toFixed(2)}
                   </b>
@@ -2744,7 +2752,7 @@ export default function PosPage() {
 
               {exchangeCredit > 0 && (
                 <div className="mt-2 flex items-center justify-between text-xs text-brand">
-                  <span>Exchange credit</span>
+                  <span>{t('pos.exchangeCredit')}</span>
                   <b className="font-bold tabular-nums">
                     -${(exchangeCredit / 100).toFixed(2)}
                   </b>
@@ -2767,11 +2775,11 @@ export default function PosPage() {
                 size="sm"
                 onClick={openNoteModal}
               >
-                {saleNote ? 'Note added' : '+ Note'}
+                {saleNote ? t('pos.noteAdded') : t('pos.addNote')}
               </Button>
               <Button variant="neutralSubtle" size="sm" onClick={lockTerminal}>
                 <LockKeyhole size={14} />
-                Lock
+                {t('pos.lock')}
               </Button>
             </div>
 
@@ -2785,7 +2793,7 @@ export default function PosPage() {
                 <UserRound size={16} className="shrink-0 text-text-muted" />
                 <span className="min-w-0 flex-1">
                   <strong className="block truncate text-sm font-bold text-text-main">
-                    {selectedCustomer?.name ?? 'Walk-in customer'}
+                    {selectedCustomer?.name ?? t('pos.walkIn')}
                   </strong>
                   {selectedCustomer?.phone && (
                     <span className="block truncate text-[0.68rem] font-medium text-text-muted">
@@ -2798,10 +2806,10 @@ export default function PosPage() {
                 variant="secondary"
                 size="icon"
                 title={
-                  selectedCustomer ? 'Use walk-in customer' : 'Add new customer'
+                  selectedCustomer ? t('pos.useWalkIn') : t('pos.addCustomer')
                 }
                 aria-label={
-                  selectedCustomer ? 'Use walk-in customer' : 'Add new customer'
+                  selectedCustomer ? t('pos.useWalkIn') : t('pos.addCustomer')
                 }
                 onClick={() =>
                   selectedCustomer
@@ -2822,7 +2830,7 @@ export default function PosPage() {
                     onClick={() => setShowHoldSaleModal(true)}
                     disabled={!mounted || !cart.length}
                   >
-                    Hold
+                    {t('pos.hold')}
                   </Button>
                   <Button
                     size="lg"
@@ -2833,7 +2841,7 @@ export default function PosPage() {
                       setTendered('');
                     }}
                   >
-                    <span>Pay</span>
+                    <span>{t('pos.pay')}</span>
                     <span className="tabular-nums">
                       ${(finalTotal / 100).toFixed(2)}
                     </span>
@@ -2848,10 +2856,10 @@ export default function PosPage() {
                     />
                     <div className="min-w-0 flex-1">
                       <strong className="text-sm text-amber-900">
-                        Open a shift to take payments
+                        {t('pos.openShiftPayment')}
                       </strong>
                       <p className="mt-1 text-xs text-amber-700">
-                        Start a shift before completing a sale.
+                        {t('pos.startShiftHelp')}
                       </p>
                     </div>
                     <ButtonLink
@@ -2859,7 +2867,7 @@ export default function PosPage() {
                       variant="warningSubtle"
                       size="sm"
                     >
-                      Open shift
+                      {t('pos.openShift')}
                     </ButtonLink>
                   </div>
                 </div>
@@ -2931,7 +2939,7 @@ export default function PosPage() {
                   size="sm"
                   className="shrink-0"
                 >
-                  Receipt
+                  {t('pos.receipt')}
                 </ButtonLink>
               )}
               <Button
@@ -2939,8 +2947,8 @@ export default function PosPage() {
                 size="bareIcon"
                 className="border-transparent text-current shadow-none hover:bg-transparent"
                 onClick={() => setMessage('')}
-                title="Close notification"
-                aria-label="Close notification"
+                title={t('pos.closeNotification')}
+                aria-label={t('pos.closeNotification')}
               >
                 <X size={16} />
               </Button>
@@ -2962,21 +2970,21 @@ export default function PosPage() {
               <LockKeyhole size={22} aria-hidden="true" />
             </div>
             <p className="mt-5 text-center text-xs font-bold uppercase tracking-wider text-brand">
-              Terminal locked
+              {t('pos.terminalLocked')}
             </p>
             <h2
               id="terminal-lock-title"
               className="mt-2 text-center text-xl font-bold tracking-tight text-text-main"
             >
-              Unlock POS
+              {t('pos.unlockPos')}
             </h2>
             <p className="mt-2 text-center text-sm leading-6 text-text-muted">
               {securedCartQuantity
-                ? `${securedCartQuantity} cart item${securedCartQuantity === 1 ? '' : 's'} secured. Select your name and enter your PIN.`
-                : 'Select your name and enter your terminal PIN.'}
+                ? t('pos.cartSecured', { count: securedCartQuantity })
+                : t('pos.unlockInstructions')}
             </p>
             <div className="mt-6 grid grid-cols-1 items-start gap-4">
-              <FormField label="Staff member" required>
+              <FormField label={t('pos.staffMember')} required>
                 <CustomSelect
                   value={unlockUserId}
                   onChange={(value) => {
@@ -2985,7 +2993,7 @@ export default function PosPage() {
                     setUnlockMessage('');
                   }}
                   disabled={isUnlocking}
-                  placeholder="Select your name"
+                  placeholder={t('pos.selectName')}
                   options={terminalUsers.map((user) => ({
                     value: user.id,
                     label: `${user.firstName} ${user.lastName}`,
@@ -3017,7 +3025,7 @@ export default function PosPage() {
               )}
 
               <FormField
-                label="Terminal PIN"
+                label={t('pos.terminalPin')}
                 required
                 sublabel={`${unlockPin.length}/8 digits`}
               >
@@ -3027,7 +3035,7 @@ export default function PosPage() {
                   masked
                   allowDecimal={false}
                   maxIntegerDigits={8}
-                  placeholder="Enter 4–8 digits"
+                  placeholder={t('pos.pinPlaceholder')}
                   onChange={(value) => {
                     setUnlockPin(value.slice(0, 8));
                     setUnlockMessage('');
@@ -3040,7 +3048,7 @@ export default function PosPage() {
               <AlertBanner
                 tone="error"
                 className="mt-4"
-                title="Unable to unlock"
+                title={t('pos.unableUnlock')}
                 description={unlockMessage}
               />
             )}
@@ -3059,7 +3067,7 @@ export default function PosPage() {
               ) : (
                 <>
                   <LockKeyhole size={16} />
-                  Unlock POS
+                  {t('pos.unlockPos')}
                 </>
               )}
             </Button>
@@ -3068,9 +3076,9 @@ export default function PosPage() {
       )}
       {showPaymentModal && (
         <Modal
-          title="Complete payment"
+          title={t('pos.completePayment')}
           density="compactNarrow"
-          description="Choose how the customer is paying."
+          description={t('pos.choosePayment')}
           icon={<CreditCard size={20} />}
           onClose={closePaymentModal}
           size="lg"
@@ -3093,10 +3101,10 @@ export default function PosPage() {
               {isProcessingPayment ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
-                  Processing…
+                  {t('pos.processing')}
                 </>
               ) : (
-                `Complete · $${(finalTotal / 100).toFixed(2)}`
+                t('pos.complete', { amount: `$${(finalTotal / 100).toFixed(2)}` })
               )}
             </Button>
           }
@@ -3104,7 +3112,7 @@ export default function PosPage() {
           <div className="grid grid-cols-1 gap-3 sm:gap-5">
             <div className="flex items-center justify-between gap-4 rounded-lg border border-brand-border bg-brand-subtle p-3 sm:p-4">
               <span className="text-xs font-bold uppercase tracking-wider text-brand">
-                Amount due
+                {t('pos.amountDue')}
               </span>
               <strong className="text-xl font-bold tabular-nums text-text-main sm:text-2xl">
                 ${(finalTotal / 100).toFixed(2)}
@@ -3113,24 +3121,24 @@ export default function PosPage() {
 
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-                Payment method
+                {t('pos.paymentMethod')}
               </span>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:mt-3 sm:grid-cols-4">
                 {[
                   {
                     value: 'CASH',
-                    label: 'Cash',
+                    label: t('payment.cash'),
                     icon: <Banknote size={18} />,
                   },
                   {
                     value: 'CARD',
-                    label: 'Card',
+                    label: t('payment.card'),
                     icon: <CreditCard size={18} />,
                   },
                   { value: 'KHQR', label: 'KHQR', icon: <QrCode size={18} /> },
                   {
                     value: 'GIFT_CARD',
-                    label: 'Gift card',
+                    label: t('entity.giftCard'),
                     icon: <Gift size={18} />,
                   },
                 ].map((method) => (
@@ -3157,15 +3165,15 @@ export default function PosPage() {
               <AlertBanner
                 tone="warning"
                 icon={<CircleAlert size={17} />}
-                title="Cash only while offline"
-                description="Reconnect before using card, KHQR, or gift card."
+                title={t('pos.offlineCashOnly')}
+                description={t('pos.reconnectPayment')}
               />
             )}
 
             <div className="min-w-0 border-t border-border-subtle pt-3 sm:pt-5">
               {paymentMethod === 'GIFT_CARD' && (
                 <div>
-                  <FormField label="Gift card code" required>
+                  <FormField label={t('pos.giftCardCode')} required>
                     <Input
                       required
                       autoFocus
@@ -3175,7 +3183,7 @@ export default function PosPage() {
                         setGiftCardBalance(null);
                       }}
                       onBlur={() => void checkGiftCard()}
-                      placeholder="Scan or enter card code"
+                      placeholder={t('pos.scanCard')}
                     />
                   </FormField>
                   {giftCardBalance !== null && (
@@ -3188,7 +3196,7 @@ export default function PosPage() {
 
               {paymentMethod === 'CASH' && (
                 <div>
-                  <FormField label="Cash received (USD)" required>
+                  <FormField label={t('pos.cashReceived')} required>
                     <NumericKeypad
                       autoFocus
                       density="compact"
@@ -3220,7 +3228,7 @@ export default function PosPage() {
                       className="mt-3 sm:mt-4"
                       tone="error"
                       icon={<CircleAlert size={17} />}
-                      title="More cash needed"
+                      title={t('pos.moreCashNeeded')}
                       description={`Add $${(cashShortfall / 100).toFixed(2)} to complete payment.`}
                     />
                   )}
@@ -3240,8 +3248,8 @@ export default function PosPage() {
                       }`}
                     >
                       {tendered !== '' && cashShortfall > 0
-                        ? 'Still due'
-                        : 'Change due'}
+                        ? t('pos.stillDue')
+                        : t('pos.changeDue')}
                     </span>
                     <strong
                       className={`text-lg font-bold tabular-nums sm:text-xl ${
@@ -3281,13 +3289,13 @@ export default function PosPage() {
       {showCustomerModal && (
         <Modal
           title={
-            customerModalMode === 'select' ? 'Select customer' : 'Add customer'
+            customerModalMode === 'select' ? t('pos.selectCustomer') : t('pos.addCustomer')
           }
           density="compactNarrow"
           description={
             customerModalMode === 'select'
-              ? 'Choose a customer for this sale.'
-              : 'Create a profile and select it automatically.'
+              ? t('pos.chooseCustomer')
+              : t('pos.createCustomerHelp')
           }
           icon={
             customerModalMode === 'select' ? (
@@ -3312,7 +3320,7 @@ export default function PosPage() {
                     setNewCustomerEmail('');
                   }}
                 >
-                  Back
+                  {t('products.back')}
                 </Button>
                 <Button
                   type="submit"
@@ -3324,10 +3332,10 @@ export default function PosPage() {
                   {isCreatingCustomer ? (
                     <>
                       <RefreshCw size={16} className="animate-spin" />
-                      Saving…
+                      {t('common.saving')}
                     </>
                   ) : (
-                    'Save customer'
+                    t('pos.saveCustomer')
                   )}
                 </Button>
               </>
@@ -3341,12 +3349,12 @@ export default function PosPage() {
                   autoFocus
                   value={customerQuery}
                   prefixIcon={<Search size={16} />}
-                  placeholder="Search name, phone, or email"
+                  placeholder={t('pos.searchCustomers')}
                   onChange={(event) => setCustomerQuery(event.target.value)}
                 />
                 <Button onClick={() => setCustomerModalMode('create')}>
                   <UserPlus size={16} />
-                  New customer
+                  {t('pos.newCustomer')}
                 </Button>
               </div>
 
@@ -3363,10 +3371,10 @@ export default function PosPage() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <strong className="block text-sm font-bold text-text-main">
-                        Walk-in customer
+                        {t('pos.walkIn')}
                       </strong>
                       <span className="block text-xs font-medium text-text-muted">
-                        No customer profile
+                        {t('pos.noCustomerProfile')}
                       </span>
                     </span>
                     {!customerId && (
@@ -3395,7 +3403,7 @@ export default function PosPage() {
                         <span className="block truncate text-xs font-medium text-text-muted">
                           {customer.phone ||
                             customer.email ||
-                            'No contact added'}
+                            t('pos.noContact')}
                         </span>
                       </span>
                       {isSelected && (
@@ -3413,15 +3421,15 @@ export default function PosPage() {
                 <EmptyState
                   className="mt-4 min-h-44 rounded-lg border border-border-subtle bg-muted-surface"
                   icon={<Search size={22} />}
-                  title="No customers found"
-                  description="Try another search or create a customer."
+                  title={t('pos.noCustomers')}
+                  description={t('pos.noCustomersHelp')}
                   action={
                     <Button
                       size="sm"
                       onClick={() => setCustomerModalMode('create')}
                     >
                       <UserPlus size={15} />
-                      New customer
+                      {t('pos.newCustomer')}
                     </Button>
                   }
                 />
@@ -3433,7 +3441,7 @@ export default function PosPage() {
                 <AlertBanner
                   tone="error"
                   className="mb-4"
-                  title="Unable to save customer"
+                  title={t('pos.unableSaveCustomer')}
                   description={customerFormError}
                 />
               )}
@@ -3442,7 +3450,7 @@ export default function PosPage() {
                 className="grid grid-cols-1 items-start gap-4"
                 onSubmit={handleAddCustomer}
               >
-                <FormField label="Full name" required>
+                <FormField label={t('pos.fullName')} required>
                   <Input
                     required
                     autoFocus
@@ -3452,11 +3460,11 @@ export default function PosPage() {
                       setNewCustomerName(event.target.value);
                       setCustomerFormError('');
                     }}
-                    placeholder="Full name"
+                    placeholder={t('pos.fullName')}
                   />
                 </FormField>
                 <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-                  <FormField label="Phone number" sublabel="(optional)">
+                  <FormField label={t('pos.phone')} sublabel={t('common.optional')}>
                     <Input
                       type="tel"
                       value={newCustomerPhone}
@@ -3464,10 +3472,10 @@ export default function PosPage() {
                         setNewCustomerPhone(event.target.value);
                         setCustomerFormError('');
                       }}
-                      placeholder="Phone number"
+                      placeholder={t('pos.phone')}
                     />
                   </FormField>
-                  <FormField label="Email address" sublabel="(optional)">
+                  <FormField label={t('pos.email')} sublabel={t('common.optional')}>
                     <Input
                       type="email"
                       value={newCustomerEmail}
@@ -3475,7 +3483,7 @@ export default function PosPage() {
                         setNewCustomerEmail(event.target.value);
                         setCustomerFormError('');
                       }}
-                      placeholder="Email address"
+                      placeholder={t('pos.email')}
                     />
                   </FormField>
                 </div>

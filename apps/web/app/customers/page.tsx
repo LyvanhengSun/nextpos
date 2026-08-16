@@ -27,6 +27,7 @@ import {
   SummaryMetricCard,
   Textarea,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -50,6 +51,7 @@ type PendingAction = {
 const money = (value: number) => `$${(value / 100).toFixed(2)}`;
 
 export default function CustomersPage() {
+  const { t, locale } = useI18n();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>(
@@ -89,7 +91,7 @@ export default function CustomersPage() {
       headers,
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message ?? 'Please sign in again.');
+    if (!response.ok) throw new Error(data.message ?? t('customers.error.signIn'));
     setCustomers(data);
   }
 
@@ -109,16 +111,16 @@ export default function CustomersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to add customer.');
+        throw new Error(data.message ?? t('customers.error.add'));
       form.reset();
       closeDrawer();
-      notify('Customer added and ready to use at checkout.');
+      notify(t('customers.success.added'));
       await load();
     } catch (error) {
       notify(
         error instanceof Error
           ? error.message
-          : 'The API server did not return a response.',
+          : t('customers.error.noResponse'),
         'error',
       );
     } finally {
@@ -139,13 +141,13 @@ export default function CustomersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to update customer.');
+        throw new Error(data.message ?? t('customers.error.update'));
       closeDrawer();
-      notify(`${data.name} updated.`);
+      notify(t('customers.success.updated', { name: data.name }));
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to update customer.',
+        error instanceof Error ? error.message : t('customers.error.update'),
         'error',
       );
     } finally {
@@ -162,12 +164,12 @@ export default function CustomersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to archive customer.');
-      notify(`${customer.name} archived. Purchase history is unchanged.`);
+        throw new Error(data.message ?? t('customers.error.archive'));
+      notify(t('customers.success.archived', { name: customer.name }));
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to archive customer.',
+        error instanceof Error ? error.message : t('customers.error.archive'),
         'error',
       );
     }
@@ -182,14 +184,14 @@ export default function CustomersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to reactivate customer.');
-      notify(`${customer.name} is active and available at checkout.`);
+        throw new Error(data.message ?? t('customers.error.reactivate'));
+      notify(t('customers.success.reactivated', { name: customer.name }));
       await load();
     } catch (error) {
       notify(
         error instanceof Error
           ? error.message
-          : 'Unable to reactivate customer.',
+          : t('customers.error.reactivate'),
         'error',
       );
     }
@@ -203,12 +205,12 @@ export default function CustomersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to delete customer.');
-      notify(`${customer.name} deleted.`);
+        throw new Error(data.message ?? t('customers.error.delete'));
+      notify(t('customers.success.deleted', { name: customer.name }));
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to delete customer.',
+        error instanceof Error ? error.message : t('customers.error.delete'),
         'error',
       );
     }
@@ -227,8 +229,8 @@ export default function CustomersPage() {
       <div className="flex items-center justify-end gap-3">
         <Button
           type="button"
-          aria-label={`Edit ${customer.name}`}
-          title="Edit customer"
+          aria-label={t('customers.editNamed', { name: customer.name })}
+          title={t('customers.edit')}
           onClick={() => setEditing(customer)}
           variant="ghost"
           size="bareIcon"
@@ -240,8 +242,8 @@ export default function CustomersPage() {
           customer.isActive ? (
             <Button
               type="button"
-              aria-label={`Archive ${customer.name}`}
-              title="Archive customer"
+              aria-label={t('customers.archiveNamed', { name: customer.name })}
+              title={t('customers.archive')}
               onClick={() =>
                 setPendingAction({
                   customer,
@@ -257,8 +259,8 @@ export default function CustomersPage() {
           ) : (
             <Button
               type="button"
-              aria-label={`Reactivate ${customer.name}`}
-              title="Reactivate customer"
+              aria-label={t('customers.reactivateNamed', { name: customer.name })}
+              title={t('customers.reactivate')}
               onClick={() => void reactivate(customer)}
               variant="ghost"
               size="bareIcon"
@@ -270,8 +272,8 @@ export default function CustomersPage() {
         ) : (
           <Button
             type="button"
-            aria-label={`Delete ${customer.name}`}
-            title="Delete customer"
+            aria-label={t('customers.deleteNamed', { name: customer.name })}
+            title={t('customers.delete')}
             onClick={() => setPendingAction({ customer, type: 'delete' })}
             variant="iconBareDanger"
             size="bareIcon"
@@ -304,12 +306,12 @@ export default function CustomersPage() {
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Customer directory"
-        title="Customers"
+        eyebrow={t('customers.directory')}
+        title={t('entity.customers')}
         actions={
           <Button type="button" onClick={() => setIsAddOpen(true)}>
             <Plus size={16} />
-            Add customer
+            {t('customers.add')}
           </Button>
         }
       />
@@ -327,34 +329,34 @@ export default function CustomersPage() {
 
           <section
             className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3"
-            aria-label="Customer summary"
+            aria-label={t('customers.summary')}
           >
             <SummaryMetricCard
-              title="Customers"
+              title={t('entity.customers')}
               value={customers.length}
-              description="Saved profiles"
+              description={t('customers.savedProfiles')}
               icon={<Users size={20} />}
               tone="sky"
             />
             <SummaryMetricCard
-              title="Customer sales"
+              title={t('customers.sales')}
               value={money(totalSpent)}
-              description="Recorded spending"
+              description={t('customers.recordedSpending')}
               icon={<TrendingUp size={20} />}
               tone="emerald"
             />
             <SummaryMetricCard
-              title="Customer visits"
+              title={t('customers.visits')}
               value={totalVisits}
-              description="Recorded purchases"
+              description={t('customers.recordedPurchases')}
               icon={<ContactRound size={20} />}
               tone="rose"
             />
           </section>
 
           <SectionCard
-            title="Customer directory"
-            description={`${results.length} of ${customers.length} customers`}
+            title={t('customers.directory')}
+            description={t('customers.resultCount', { shown: results.length, total: customers.length })}
             icon={<Users size={20} />}
             actions={
               <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-text-secondary">
@@ -368,7 +370,7 @@ export default function CustomersPage() {
                 prefixIcon={<Search size={16} />}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search name, phone, or email"
+                placeholder={t('customers.search')}
                 wrapperClassName="sm:max-w-md"
               />
             </div>
@@ -385,11 +387,11 @@ export default function CustomersPage() {
                               {customer.name}
                             </h3>
                             {!customer.isActive && (
-                              <StatusBadge tone="neutral">Archived</StatusBadge>
+                              <StatusBadge tone="neutral">{t('customers.archived')}</StatusBadge>
                             )}
                           </div>
                           <p className="mt-1 mb-0 text-xs text-text-muted">
-                            {customer.phone ?? 'No phone'}
+                            {customer.phone ?? t('customers.noPhone')}
                             {customer.email ? ` · ${customer.email}` : ''}
                           </p>
                         </div>
@@ -399,7 +401,7 @@ export default function CustomersPage() {
                       <dl className="mt-4 grid grid-cols-3 gap-3 rounded-lg border border-border-subtle bg-muted-surface p-3 text-xs">
                         <div>
                           <dt className="font-bold uppercase tracking-wider text-text-muted">
-                            Visits
+                            {t('customers.visitsShort')}
                           </dt>
                           <dd className="mt-1 mb-0 font-bold text-text-main">
                             {customer.saleCount}
@@ -407,7 +409,7 @@ export default function CustomersPage() {
                         </div>
                         <div>
                           <dt className="font-bold uppercase tracking-wider text-text-muted">
-                            Spent
+                            {t('customers.spent')}
                           </dt>
                           <dd className="mt-1 mb-0 font-bold text-brand">
                             {money(customer.totalSpent)}
@@ -415,13 +417,13 @@ export default function CustomersPage() {
                         </div>
                         <div>
                           <dt className="font-bold uppercase tracking-wider text-text-muted">
-                            Last
+                            {t('customers.last')}
                           </dt>
                           <dd className="mt-1 mb-0 font-semibold text-text-secondary">
                             {customer.lastPurchaseAt
                               ? new Date(
                                   customer.lastPurchaseAt,
-                                ).toLocaleDateString()
+                                ).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US')
                               : '-'}
                           </dd>
                         </div>
@@ -434,13 +436,13 @@ export default function CustomersPage() {
                   <table className="w-full min-w-[820px] border-collapse text-left">
                     <thead className="bg-muted-surface text-xs font-bold uppercase tracking-wider text-text-secondary">
                       <tr className="border-b border-border-subtle">
-                        <th className="px-4 py-3 sm:pl-8">Customer</th>
-                        <th className="px-4 py-3">Contact</th>
-                        <th className="px-4 py-3 text-right">Visits</th>
-                        <th className="px-4 py-3 text-right">Total spent</th>
-                        <th className="px-4 py-3">Last purchase</th>
+                        <th className="px-4 py-3 sm:pl-8">{t('entity.customer')}</th>
+                        <th className="px-4 py-3">{t('customers.contact')}</th>
+                        <th className="px-4 py-3 text-right">{t('customers.visitsShort')}</th>
+                        <th className="px-4 py-3 text-right">{t('customers.totalSpent')}</th>
+                        <th className="px-4 py-3">{t('customers.lastPurchase')}</th>
                         <th className="px-4 py-3 text-right sm:pr-8">
-                          Actions
+                          {t('products.actions')}
                         </th>
                       </tr>
                     </thead>
@@ -457,7 +459,7 @@ export default function CustomersPage() {
                               </strong>
                               {!customer.isActive && (
                                 <StatusBadge tone="neutral">
-                                  Archived
+                                  {t('customers.archived')}
                                 </StatusBadge>
                               )}
                             </div>
@@ -480,7 +482,7 @@ export default function CustomersPage() {
                             {customer.lastPurchaseAt
                               ? new Date(
                                   customer.lastPurchaseAt,
-                                ).toLocaleDateString()
+                                ).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US')
                               : '—'}
                           </td>
                           <td className="px-4 py-4 sm:pr-8">
@@ -495,8 +497,8 @@ export default function CustomersPage() {
             ) : (
               <EmptyState
                 icon={<Users size={24} />}
-                title="No customers found"
-                description="Try a different name, phone number, or email."
+                title={t('customers.empty')}
+                description={t('customers.emptyHelp')}
               />
             )}
           </SectionCard>
@@ -505,11 +507,11 @@ export default function CustomersPage() {
 
       {(isAddOpen || editing) && (
         <Modal
-          title={editing ? 'Edit customer' : 'Add customer'}
+          title={editing ? t('customers.edit') : t('customers.add')}
           description={
             editing
-              ? 'Update this customer profile.'
-              : 'Create a profile for faster checkout.'
+              ? t('customers.editHelp')
+              : t('customers.addHelp')
           }
           icon={<ContactRound size={19} />}
           onClose={closeDrawer}
@@ -525,7 +527,7 @@ export default function CustomersPage() {
           >
             <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2">
               <FormField
-                label="Full name"
+                label={t('customers.fullName')}
                 required
                 id="customer-name"
                 className="md:col-span-2"
@@ -536,12 +538,12 @@ export default function CustomersPage() {
                   autoFocus
                   name="name"
                   defaultValue={editing?.name ?? ''}
-                  placeholder="e.g. Sophie Chan"
+                  placeholder={t('customers.namePlaceholder')}
                 />
               </FormField>
               <FormField
-                label="Phone number"
-                sublabel="(optional)"
+                label={t('customers.phone')}
+                sublabel={t('common.optional')}
                 id="customer-phone"
               >
                 <Input
@@ -549,12 +551,12 @@ export default function CustomersPage() {
                   name="phone"
                   defaultValue={editing?.phone ?? ''}
                   inputMode="tel"
-                  placeholder="e.g. 098 738 393"
+                  placeholder={t('customers.phonePlaceholder')}
                 />
               </FormField>
               <FormField
-                label="Email address"
-                sublabel="(optional)"
+                label={t('auth.email')}
+                sublabel={t('common.optional')}
                 id="customer-email"
               >
                 <Input
@@ -562,12 +564,12 @@ export default function CustomersPage() {
                   name="email"
                   defaultValue={editing?.email ?? ''}
                   type="email"
-                  placeholder="e.g. sophie@email.com"
+                  placeholder={t('customers.emailPlaceholder')}
                 />
               </FormField>
               <FormField
-                label="Customer note"
-                sublabel="(optional)"
+                label={t('customers.note')}
+                sublabel={t('common.optional')}
                 id="customer-note"
                 className="md:col-span-2"
               >
@@ -575,22 +577,22 @@ export default function CustomersPage() {
                   id="customer-note"
                   name="note"
                   defaultValue={editing?.note ?? ''}
-                  placeholder="Preference, reminder, or helpful detail"
+                  placeholder={t('customers.notePlaceholder')}
                   rows={4}
                 />
               </FormField>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-5">
               <Button type="button" variant="secondary" onClick={closeDrawer}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={saving}>
                 {editing ? <Pencil size={16} /> : <Plus size={16} />}
                 {saving
-                  ? 'Saving...'
+                  ? t('common.saving')
                   : editing
-                    ? 'Save changes'
-                    : 'Add customer'}
+                    ? t('branches.saveChanges')
+                    : t('customers.add')}
               </Button>
             </div>
           </form>
@@ -601,13 +603,13 @@ export default function CustomersPage() {
         <Modal
           title={
             pendingAction.type === 'archive'
-              ? 'Archive customer?'
-              : 'Delete customer?'
+              ? t('customers.archiveTitle')
+              : t('customers.deleteTitle')
           }
           description={
             pendingAction.type === 'archive'
-              ? `${pendingAction.customer.name} will not appear at checkout, but history stays saved.`
-              : `${pendingAction.customer.name} has no sales and will be permanently deleted.`
+              ? t('customers.archiveHelpNamed', { name: pendingAction.customer.name })
+              : t('customers.deleteHelpNamed', { name: pendingAction.customer.name })
           }
           icon={
             pendingAction.type === 'archive' ? (
@@ -626,7 +628,7 @@ export default function CustomersPage() {
                 variant="secondary"
                 onClick={() => setPendingAction(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 type="button"
@@ -635,7 +637,7 @@ export default function CustomersPage() {
                 }
                 onClick={() => void confirmPendingAction()}
               >
-                {pendingAction.type === 'archive' ? 'Archive' : 'Delete'}
+                {pendingAction.type === 'archive' ? t('customers.archiveAction') : t('customers.deleteAction')}
               </Button>
             </>
           }
@@ -647,7 +649,7 @@ export default function CustomersPage() {
                   {pendingAction.customer.name}
                 </p>
                 <p className="mt-1 mb-0 text-xs text-text-muted">
-                  {pendingAction.customer.phone ?? 'No phone'}
+                  {pendingAction.customer.phone ?? t('customers.noPhone')}
                   {pendingAction.customer.email
                     ? ` · ${pendingAction.customer.email}`
                     : ''}
@@ -656,7 +658,7 @@ export default function CustomersPage() {
               <StatusBadge
                 tone={pendingAction.customer.isActive ? 'success' : 'neutral'}
               >
-                {pendingAction.customer.isActive ? 'Active' : 'Archived'}
+                {pendingAction.customer.isActive ? t('common.active') : t('customers.archived')}
               </StatusBadge>
             </div>
           </div>

@@ -29,6 +29,7 @@ import {
   SectionCard,
   SummaryMetricCard,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 const requiredHeaders = [
@@ -67,13 +68,14 @@ const money = (value: number) =>
   }).format(value);
 
 export default function SupplierStatementsPage() {
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
   const [supplierId, setSupplierId] = useState('');
   const [rows, setRows] = useState<StatementRow[]>([]);
   const [fileName, setFileName] = useState('');
-  const [message, setMessage] = useState('Upload a statement CSV.');
+  const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<MessageTone>('info');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -91,7 +93,7 @@ export default function SupplierStatementsPage() {
         fetch(`${api}/supplier-invoices`, { headers }),
       ]);
       if (!supplierResponse.ok || !invoiceResponse.ok) {
-        throw new Error('Unable to load supplier account data.');
+        throw new Error(t('supplierStatements.error.load'));
       }
       setSuppliers(await supplierResponse.json());
       setInvoices(await invoiceResponse.json());
@@ -99,13 +101,13 @@ export default function SupplierStatementsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to load supplier account data.',
+          : t('supplierStatements.error.load'),
       );
       setMessageTone('error');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -132,7 +134,7 @@ export default function SupplierStatementsPage() {
         setRows([]);
         setFileName('');
         setMessage(
-          `CSV is missing required columns: ${missingHeaders.join(', ')}.`,
+          t('supplierStatements.error.missingColumns', { columns: missingHeaders.join(', ') }),
         );
         setMessageTone('error');
         return;
@@ -152,12 +154,12 @@ export default function SupplierStatementsPage() {
       setRows(parsed);
       setFileName(file.name);
       setMessage(
-        `${parsed.length} transaction${parsed.length === 1 ? '' : 's'} imported from ${file.name}.`,
+        t('supplierStatements.success.imported', { count: parsed.length, file: file.name }),
       );
       setMessageTone('success');
     };
     reader.onerror = () => {
-      setMessage('The selected CSV could not be read. Please try again.');
+      setMessage(t('supplierStatements.error.readCsv'));
       setMessageTone('error');
     };
     reader.readAsText(file);
@@ -234,7 +236,7 @@ export default function SupplierStatementsPage() {
 
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Supplier accounts" title="Supplier statements" />
+      <PageHeading eyebrow={t('supplierInvoices.eyebrow')} title={t('supplierStatements.title')} />
 
       <div>
         <PageContainer className="space-y-6">
@@ -245,22 +247,22 @@ export default function SupplierStatementsPage() {
           )}
 
           <SectionCard
-            title="Import statement"
-            description="Upload CSV to reconcile."
+            title={t('supplierStatements.import')}
+            description={t('supplierStatements.importHelp')}
             icon={<FileSpreadsheet size={20} />}
           >
             <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2">
               <FormField
-                label="Supplier"
-                sublabel="(optional)"
-                help="Compare invoices."
+                label={t('entity.supplier')}
+                sublabel={t('common.optional')}
+                help={t('supplierStatements.compareInvoices')}
               >
                 <CustomSelect
                   value={supplierId}
                   onChange={setSupplierId}
                   disabled={isLoading}
                   placeholder={
-                    isLoading ? 'Loading suppliers...' : 'Select supplier'
+                    isLoading ? t('supplierStatements.loadingSuppliers') : t('purchaseOrders.selectSupplier')
                   }
                   leadingIcon={<Building2 size={16} />}
                   options={suppliers.map((supplier) => ({
@@ -271,9 +273,9 @@ export default function SupplierStatementsPage() {
               </FormField>
 
               <FormField
-                label="Statement CSV"
+                label={t('supplierStatements.statementCsv')}
                 required
-                help="Requires date, reference, debit, credit, balance."
+                help={t('supplierStatements.csvRequirements')}
               >
                 <input
                   ref={fileInputRef}
@@ -290,10 +292,10 @@ export default function SupplierStatementsPage() {
                     </span>
                     <div className="min-w-0">
                       <p className="m-0 truncate text-sm font-bold text-text-main">
-                        {fileName || 'No CSV selected'}
+                        {fileName || t('supplierStatements.noCsv')}
                       </p>
                       <p className="m-0 mt-0.5 text-xs text-text-muted">
-                        Standard UTF-8 CSV
+                        {t('supplierStatements.csvFormat')}
                       </p>
                     </div>
                   </div>
@@ -304,7 +306,7 @@ export default function SupplierStatementsPage() {
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload size={16} />
-                    {fileName ? 'Replace CSV' : 'Choose CSV'}
+                    {fileName ? t('supplierStatements.replaceCsv') : t('supplierStatements.chooseCsv')}
                   </Button>
                 </div>
               </FormField>
@@ -315,32 +317,32 @@ export default function SupplierStatementsPage() {
             <>
               <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
                 <SummaryMetricCard
-                  title="Statement balance"
+                  title={t('supplierStatements.statementBalance')}
                   value={money(closingBalance)}
-                  description={`${rows.length} imported`}
+                  description={t('supplierStatements.importedCount', { count: rows.length })}
                   icon={<FileSpreadsheet size={20} />}
                   tone="purple"
                 />
                 <SummaryMetricCard
-                  title="System balance"
+                  title={t('supplierStatements.systemBalance')}
                   value={supplierId ? money(systemBalance) : '—'}
                   description={
                     selectedSupplier
                       ? selectedSupplier.name
-                      : 'Select supplier'
+                      : t('purchaseOrders.selectSupplier')
                   }
                   icon={<WalletCards size={20} />}
                   tone="sky"
                 />
                 <SummaryMetricCard
-                  title="Difference"
+                  title={t('supplierStatements.difference')}
                   value={supplierId ? money(balanceDifference) : '—'}
                   description={
                     supplierId
                       ? Math.abs(balanceDifference) < 0.005
-                        ? 'Balances match'
-                        : 'Needs review'
-                      : 'No comparison'
+                        ? t('supplierStatements.balancesMatch')
+                        : t('supplierStatements.needsReview')
+                      : t('supplierStatements.noComparison')
                   }
                   icon={<Scale size={20} />}
                   tone={
@@ -352,8 +354,8 @@ export default function SupplierStatementsPage() {
               </section>
 
               <SectionCard
-                title="Statement review"
-                description={`${money(debitTotal)} debits · ${money(creditTotal)} credits`}
+                title={t('supplierStatements.review')}
+                description={t('supplierStatements.totals', { debits: money(debitTotal), credits: money(creditTotal) })}
                 icon={<Scale size={20} />}
                 bodyPadding={false}
               >
@@ -363,8 +365,7 @@ export default function SupplierStatementsPage() {
                       tone="warning"
                       icon={<AlertCircle size={17} />}
                     >
-                      Statement rows differ from the closing balance by{' '}
-                      {money(statementVariance)}.
+                      {t('supplierStatements.variance', { amount: money(statementVariance) })}
                     </AlertBanner>
                   )}
                   {supplierId ? (
@@ -379,14 +380,17 @@ export default function SupplierStatementsPage() {
                       }
                     >
                       {unmatched.length
-                        ? `${unmatched.length} unmatched reference${unmatched.length === 1 ? '' : 's'}: ${unmatched
-                            .map((row) => row.reference || 'No reference')
-                            .join(', ')}`
-                        : 'All statement references are matched.'}
+                        ? t('supplierStatements.unmatched', {
+                            count: unmatched.length,
+                            references: unmatched
+                              .map((row) => row.reference || t('supplierDetail.noReference'))
+                              .join(', '),
+                          })
+                        : t('supplierStatements.allMatched')}
                     </AlertBanner>
                   ) : (
                     <AlertBanner tone="info" icon={<Building2 size={17} />}>
-                      Select a supplier to compare statement references.
+                      {t('supplierStatements.selectToCompare')}
                     </AlertBanner>
                   )}
                 </div>
@@ -396,12 +400,12 @@ export default function SupplierStatementsPage() {
                     <thead>
                       <tr className="border-b border-border-subtle bg-muted-surface">
                         {[
-                          'Date',
-                          'Reference',
-                          'Description',
-                          'Debit',
-                          'Credit',
-                          'Balance',
+                          t('supplierStatements.date'),
+                          t('suppliers.reference'),
+                          t('supplierStatements.description'),
+                          t('supplierStatements.debit'),
+                          t('supplierStatements.credit'),
+                          t('supplierInvoices.balance'),
                         ].map((heading, index) => (
                           <th
                             key={heading}
@@ -445,14 +449,14 @@ export default function SupplierStatementsPage() {
             </>
           ) : (
             <SectionCard
-              title="Statement review"
-              description="Import CSV to review."
+              title={t('supplierStatements.review')}
+              description={t('supplierStatements.reviewHelp')}
               icon={<FileSpreadsheet size={20} />}
               bodyPadding={false}
             >
               <EmptyState
-                title="No statement imported"
-                description="Choose a CSV."
+                title={t('supplierStatements.empty')}
+                description={t('supplierStatements.emptyHelp')}
                 icon={<FileSpreadsheet size={24} />}
                 className="min-h-40"
               />

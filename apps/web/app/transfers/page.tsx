@@ -24,6 +24,7 @@ import {
   PageHeading,
   SectionCard,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 type Me = { branchId: string | null };
@@ -62,21 +63,22 @@ function TablePager({
   onPageChange: (value: number) => void;
   onPageSizeChange: (value: number) => void;
 }) {
+  const { t } = useI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const start = total ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, total);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-4 py-3 sm:px-8">
       <span className="text-xs text-text-muted">
-        Showing{' '}
+        {t('purchaseOrders.showing')}{' '}
         <strong className="font-bold text-text-secondary">
           {start}–{end}
         </strong>{' '}
-        of <strong className="font-bold text-text-secondary">{total}</strong>
+        {t('purchaseOrders.of')} <strong className="font-bold text-text-secondary">{total}</strong>
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 text-xs text-text-muted">
-          <span>Rows</span>
+          <span>{t('purchaseOrders.rows')}</span>
           <CustomSelect
             value={String(pageSize)}
             onChange={(value) => onPageSizeChange(Number(value))}
@@ -88,10 +90,10 @@ function TablePager({
           />
         </div>
         <span className="text-xs text-text-muted">
-          Page {page} of {pages}
+          {t('purchaseOrders.pageCount', { page, pages })}
         </span>
         <Button
-          aria-label="Previous page"
+          aria-label={t('receiving.previousPage')}
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
           variant="secondary"
@@ -101,7 +103,7 @@ function TablePager({
           <ChevronLeft size={16} />
         </Button>
         <Button
-          aria-label="Next page"
+          aria-label={t('receiving.nextPage')}
           disabled={page === pages}
           onClick={() => onPageChange(page + 1)}
           variant="secondary"
@@ -116,6 +118,7 @@ function TablePager({
 }
 
 export default function TransfersPage() {
+  const { t, locale } = useI18n();
   const [me, setMe] = useState<Me | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [stock, setStock] = useState<StockItem[]>([]);
@@ -155,7 +158,7 @@ export default function TransfersPage() {
           fetch(`${api}/inventory/transfers`, { headers }),
         ]);
       if (!meResponse.ok || !branchesResponse.ok || !transfersResponse.ok) {
-        throw new Error('Please sign in again.');
+        throw new Error(t('transfers.error.signIn'));
       }
 
       const user = await meResponse.json();
@@ -200,16 +203,16 @@ export default function TransfersPage() {
     const selected = String(form.stockTarget ?? '').split(':');
     const quantity = Number(form.quantity);
     if (available === undefined) {
-      showMessage('Choose stock from this branch.', 'error');
+      showMessage(t('transfers.error.chooseStock'), 'error');
       return;
     }
     if (!form.destinationBranchId) {
-      showMessage('Choose destination branch.', 'error');
+      showMessage(t('transfers.error.chooseDestination'), 'error');
       return;
     }
     if (quantity > available) {
       showMessage(
-        `Only ${available} available in ${activeBranch?.name ?? 'this branch'}.`,
+        t('transfers.error.available', { count: available, branch: activeBranch?.name ?? t('transfers.thisBranch') }),
         'error',
       );
       return;
@@ -228,20 +231,20 @@ export default function TransfersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        showMessage(data.message ?? 'Transfer could not be saved.', 'error');
+        showMessage(data.message ?? t('transfers.error.save'), 'error');
         return;
       }
       formElement.reset();
       setTarget('');
       setDestinationBranchId('');
       showMessage(
-        'Stock transferred. Both branches updated.',
+        t('transfers.success.transferred'),
         'success',
       );
       await load();
     } catch {
       showMessage(
-        'The API server did not return a response. Confirm it is running, then try again.',
+        t('receiving.error.apiRetry'),
         'error',
       );
     } finally {
@@ -261,7 +264,7 @@ export default function TransfersPage() {
   const stockOptions = stock.map((item) => ({
     value: `${item.variant ? 'v' : 'p'}:${item.product.id}${item.variant ? `:${item.variant.id}` : ''}`,
     label: `${item.product.name}${item.variant ? ` — ${item.variant.name}` : ''}`,
-    sublabel: `${item.variant?.sku ?? item.product.sku} · ${item.quantity} available`,
+    sublabel: `${item.variant?.sku ?? item.product.sku} · ${t('transfers.availableCount', { count: item.quantity })}`,
   }));
   const destinationOptions = destinations.map((branch) => ({
     value: branch.id,
@@ -270,7 +273,7 @@ export default function TransfersPage() {
   }));
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Multi-branch inventory" title="Stock transfers" />
+      <PageHeading eyebrow={t('transfers.eyebrow')} title={t('transfers.title')} />
 
       <div>
         <PageContainer>
@@ -292,16 +295,16 @@ export default function TransfersPage() {
 
           <section className="mb-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(17rem,1fr)]">
             <SectionCard
-              title="New transfer"
-              description="Move stock between branches."
+              title={t('transfers.new')}
+              description={t('transfers.newHelp')}
               icon={<Send size={20} />}
               className="h-full"
             >
               {isLoading ? (
                 <EmptyState
                   icon={<Send size={24} />}
-                  title="Loading transfer details"
-                  description="Preparing stock."
+                  title={t('transfers.loadingDetails')}
+                  description={t('transfers.preparingStock')}
                 />
               ) : me?.branchId && destinations.length ? (
                 <form
@@ -312,10 +315,10 @@ export default function TransfersPage() {
                   <div className="grid grid-cols-1 items-center gap-3 rounded-lg border border-border-subtle bg-muted-surface p-5 sm:grid-cols-[1fr_auto_1fr] md:col-span-2">
                     <div>
                       <span className="block text-xs font-bold uppercase tracking-wider text-text-muted">
-                        From
+                        {t('transfers.from')}
                       </span>
                       <strong className="mt-1 block text-sm text-text-main">
-                        {activeBranch?.name ?? 'Active branch'}
+                        {activeBranch?.name ?? t('transfers.activeBranch')}
                       </strong>
                     </div>
                     <ArrowRight
@@ -324,20 +327,20 @@ export default function TransfersPage() {
                     />
                     <div>
                       <span className="block text-xs font-bold uppercase tracking-wider text-text-muted">
-                        To
+                        {t('transfers.to')}
                       </span>
                       <strong className="mt-1 block text-sm text-text-main">
                         {destinationBranchId
                           ? destinations.find(
                               (branch) => branch.id === destinationBranchId,
                             )?.name
-                          : 'Choose destination'}
+                          : t('transfers.chooseDestination')}
                       </strong>
                     </div>
                   </div>
 
                   <FormField
-                    label="Product or exact variant"
+                    label={t('purchaseOrders.productOrVariant')}
                     id="stockTarget"
                     required
                     className="md:col-span-2"
@@ -347,16 +350,16 @@ export default function TransfersPage() {
                       value={target}
                       onChange={setTarget}
                       options={stockOptions}
-                      placeholder="Select available stock"
+                      placeholder={t('transfers.selectStock')}
                     />
                   </FormField>
                   {target && (
                     <AlertBanner tone="info" className="md:col-span-2">
-                      Available: <strong>{available ?? 0}</strong>
+                      {t('transfers.available')}: <strong>{available ?? 0}</strong>
                     </AlertBanner>
                   )}
                   <FormField
-                    label="Destination branch"
+                    label={t('transfers.destinationBranch')}
                     id="destinationBranchId"
                     required
                   >
@@ -365,10 +368,10 @@ export default function TransfersPage() {
                       value={destinationBranchId}
                       onChange={setDestinationBranchId}
                       options={destinationOptions}
-                      placeholder="Select destination branch"
+                      placeholder={t('transfers.selectDestination')}
                     />
                   </FormField>
-                  <FormField label="Quantity" id="transferQuantity" required>
+                  <FormField label={t('suppliers.quantity')} id="transferQuantity" required>
                     <Input
                       required
                       id="transferQuantity"
@@ -377,40 +380,40 @@ export default function TransfersPage() {
                       name="quantity"
                       type="number"
                       step="1"
-                      placeholder="e.g. 20"
+                      placeholder={t('transfers.quantityPlaceholder')}
                     />
                   </FormField>
                   <FormField
-                    label="Note"
+                    label={t('purchaseOrders.note')}
                     id="transferNote"
-                    sublabel="(optional)"
+                    sublabel={t('common.optional')}
                     className="md:col-span-2"
                   >
                     <Input
                       id="transferNote"
                       name="note"
-                      placeholder="e.g. Weekly transfer"
+                      placeholder={t('transfers.notePlaceholder')}
                     />
                   </FormField>
                   <div className="flex justify-end border-t border-border-subtle pt-5 md:col-span-2">
                     <Button type="submit" disabled={isSaving}>
                       <PackageCheck size={16} />
-                      {isSaving ? 'Transferring…' : 'Transfer stock'}
+                      {isSaving ? t('transfers.transferring') : t('transfers.transferStock')}
                     </Button>
                   </div>
                 </form>
               ) : (
                 <AlertBanner tone="warning" icon={<CircleAlert size={18} />}>
                   {me?.branchId
-                    ? 'Create another branch before transferring stock.'
-                    : 'Choose an active branch before transferring stock.'}
+                    ? t('transfers.needAnotherBranch')
+                    : t('transfers.needActiveBranch')}
                 </AlertBanner>
               )}
             </SectionCard>
 
             <SectionCard
-              title="Safe transfer"
-              description="Updates both branches together."
+              title={t('transfers.safeTransfer')}
+              description={t('transfers.safeTransferHelp')}
               icon={<Warehouse size={20} />}
               className="h-full"
             >
@@ -418,18 +421,18 @@ export default function TransfersPage() {
                 {[
                   [
                     '1',
-                    'Choose stock',
-                    'Only available items appear.',
+                    t('transfers.stepChoose'),
+                    t('transfers.stepChooseHelp'),
                   ],
                   [
                     '2',
-                    'Set destination',
-                    'Pick another branch.',
+                    t('transfers.stepDestination'),
+                    t('transfers.stepDestinationHelp'),
                   ],
                   [
                     '3',
-                    'Track both sides',
-                    'Stock out and in are recorded.',
+                    t('transfers.stepTrack'),
+                    t('transfers.stepTrackHelp'),
                   ],
                 ].map(([number, title, text]) => (
                   <div key={number} className="flex gap-3">
@@ -451,8 +454,8 @@ export default function TransfersPage() {
           </section>
 
           <SectionCard
-            title="Recent transfers"
-            description={`${filteredTransfers.length} shown · ${transfers.length} total`}
+            title={t('transfers.recent')}
+            description={t('transfers.count', { shown: filteredTransfers.length, total: transfers.length })}
             icon={<Warehouse size={20} />}
             bodyPadding={false}
           >
@@ -464,16 +467,16 @@ export default function TransfersPage() {
                   setQuery(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Search product, branch, or note"
+                placeholder={t('transfers.search')}
                 prefixIcon={<Search size={16} />}
                 wrapperClassName="max-w-md"
-                aria-label="Search stock transfers"
+                aria-label={t('transfers.searchLabel')}
               />
             </div>
             {isLoading ? (
               <EmptyState
-                title="Loading transfers"
-                description="Preparing movements."
+                title={t('transfers.loading')}
+                description={t('transfers.preparingMovements')}
                 icon={<Warehouse size={24} />}
               />
             ) : rows.length ? (
@@ -483,16 +486,16 @@ export default function TransfersPage() {
                     <thead className="border-b border-border-subtle bg-muted-surface">
                       <tr>
                         {[
-                          'Transferred',
-                          'Product',
-                          'From',
-                          'To',
-                          'Quantity',
-                          'Note',
-                        ].map((heading) => (
+                          t('transfers.transferred'),
+                          t('entity.product'),
+                          t('transfers.from'),
+                          t('transfers.to'),
+                          t('suppliers.quantity'),
+                          t('purchaseOrders.note'),
+                        ].map((heading, index) => (
                           <th
                             key={heading}
-                            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-secondary first:pl-8 last:pr-8 ${heading === 'Quantity' ? 'text-right' : 'text-left'}`}
+                            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider text-text-secondary first:pl-8 last:pr-8 ${index === 4 ? 'text-right' : 'text-left'}`}
                           >
                             {heading}
                           </th>
@@ -507,7 +510,7 @@ export default function TransfersPage() {
                         >
                           <td className="py-4 pr-4 pl-8 text-xs whitespace-nowrap text-text-muted">
                             {new Date(transfer.createdAt).toLocaleString(
-                              undefined,
+                              locale === 'km' ? 'km-KH' : 'en-US',
                               { dateStyle: 'medium', timeStyle: 'short' },
                             )}
                           </td>
@@ -555,8 +558,8 @@ export default function TransfersPage() {
               </>
             ) : (
               <EmptyState
-                title="No transfers found"
-                description="Try another search."
+                title={t('transfers.empty')}
+                description={t('transfers.emptyHelp')}
                 icon={<Warehouse size={24} />}
               />
             )}

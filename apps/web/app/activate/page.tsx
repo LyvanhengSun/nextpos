@@ -3,9 +3,9 @@ import { CredentialsForm } from '../../components/auth/credentials-form';
 export default function ActivatePage() {
   return (
     <CredentialsForm
-      title="Activate owner"
+      titleKey="auth.activateOwner"
       endpoint="activate-owner"
-      success="Owner access ready. Sign in next."
+      successKey="auth.ownerAccessReady"
     />
   );
 }

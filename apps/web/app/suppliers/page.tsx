@@ -23,6 +23,7 @@ import {
   Textarea,
 } from '../../components/ui/';
 import { PageContainer } from '../../components/layout/page-container';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -43,6 +44,7 @@ type Supplier = {
 };
 
 export default function SuppliersPage() {
+  const { t, locale } = useI18n();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>(
@@ -92,7 +94,7 @@ export default function SuppliersPage() {
     );
     const data = await response.json().catch(() => ({}));
     if (!response.ok)
-      throw new Error(data.message ?? 'Unable to load suppliers.');
+      throw new Error(data.message ?? t('supplierPage.error.load'));
     setSuppliers(data);
   }
 
@@ -112,13 +114,13 @@ export default function SuppliersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to add supplier.');
+        throw new Error(data.message ?? t('supplierPage.error.add'));
       form.reset();
       await load();
-      notify(`${data.name} added to your supplier directory.`);
+      notify(t('supplierPage.success.added', { name: data.name }));
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to add supplier.',
+        error instanceof Error ? error.message : t('supplierPage.error.add'),
         'error',
       );
     } finally {
@@ -139,13 +141,13 @@ export default function SuppliersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to update supplier.');
+        throw new Error(data.message ?? t('supplierPage.error.update'));
       setEditing(null);
       await load();
-      notify(`${data.name} updated.`);
+      notify(t('supplierPage.success.updated', { name: data.name }));
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to update supplier.',
+        error instanceof Error ? error.message : t('supplierPage.error.update'),
         'error',
       );
     } finally {
@@ -156,7 +158,7 @@ export default function SuppliersPage() {
   async function deactivate(supplier: Supplier) {
     if (
       !window.confirm(
-        `Deactivate ${supplier.name}? Existing purchase and invoice history will be kept.`,
+        t('supplierPage.confirmDeactivate', { name: supplier.name }),
       )
     )
       return;
@@ -168,15 +170,15 @@ export default function SuppliersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to deactivate supplier.');
+        throw new Error(data.message ?? t('supplierPage.error.deactivate'));
       if (editing?.id === supplier.id) setEditing(null);
       await load();
-      notify(`${supplier.name} deactivated. Historical records are unchanged.`);
+      notify(t('supplierPage.success.deactivated', { name: supplier.name }));
     } catch (error) {
       notify(
         error instanceof Error
           ? error.message
-          : 'Unable to deactivate supplier.',
+          : t('supplierPage.error.deactivate'),
         'error',
       );
     }
@@ -191,14 +193,14 @@ export default function SuppliersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
-        throw new Error(data.message ?? 'Unable to reactivate supplier.');
+        throw new Error(data.message ?? t('supplierPage.error.reactivate'));
       await load();
-      notify(`${supplier.name} reactivated and available for new purchases.`);
+      notify(t('supplierPage.success.reactivated', { name: supplier.name }));
     } catch (error) {
       notify(
         error instanceof Error
           ? error.message
-          : 'Unable to reactivate supplier.',
+          : t('supplierPage.error.reactivate'),
         'error',
       );
     }
@@ -222,11 +224,11 @@ export default function SuppliersPage() {
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Purchasing"
-        title="Suppliers"
+        eyebrow={t('supplierPage.purchasing')}
+        title={t('entity.suppliers')}
         actions={
           <label className="flex items-center gap-2 text-xs font-bold text-text-secondary">
-            <span className="hidden sm:inline">Period</span>
+            <span className="hidden sm:inline">{t('supplierPage.period')}</span>
             <div className="w-36">
               <CustomSelect
                 value={performancePeriod}
@@ -234,10 +236,10 @@ export default function SuppliersPage() {
                   setPerformancePeriod(value as 'all' | '30d' | '90d' | 'year')
                 }
                 options={[
-                  { value: 'all', label: 'All time' },
-                  { value: '30d', label: 'Last 30 days' },
-                  { value: '90d', label: 'Last 90 days' },
-                  { value: 'year', label: 'This year' },
+                  { value: 'all', label: t('supplierPage.allTime') },
+                  { value: '30d', label: t('supplierPage.last30') },
+                  { value: '90d', label: t('supplierPage.last90') },
+                  { value: 'year', label: t('supplierPage.thisYear') },
                 ]}
               />
             </div>
@@ -265,12 +267,12 @@ export default function SuppliersPage() {
                   </div>
                   <div className="min-w-0">
                     <h2 className="m-0 text-base font-bold tracking-tight text-text-main">
-                      {editing ? 'Edit supplier' : 'Add supplier'}
+                      {editing ? t('supplierPage.edit') : t('supplierPage.add')}
                     </h2>
                     <p className="mt-1 mb-0 text-xs text-text-muted">
                       {editing
-                        ? 'Update supplier contact details.'
-                        : 'A name is all you need to start.'}
+                        ? t('supplierPage.editHelp')
+                        : t('supplierPage.addHelp')}
                     </p>
                   </div>
                 </div>
@@ -281,7 +283,7 @@ export default function SuppliersPage() {
                     variant="ghost"
                     size="sm"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                 )}
               </div>
@@ -291,7 +293,7 @@ export default function SuppliersPage() {
                 onSubmit={editing ? update : create}
                 autoComplete="off"
               >
-                <FormField label="Supplier name" required id="supplier-name">
+                <FormField label={t('supplierPage.name')} required id="supplier-name">
                   <Input
                     id="supplier-name"
                     required
@@ -299,12 +301,12 @@ export default function SuppliersPage() {
                     minLength={2}
                     maxLength={100}
                     defaultValue={editing?.name}
-                    placeholder="e.g. Phnom Penh Foods"
+                    placeholder={t('supplierPage.namePlaceholder')}
                   />
                 </FormField>
                 <FormField
-                  label="Phone"
-                  sublabel="(optional)"
+                  label={t('customers.phone')}
+                  sublabel={t('common.optional')}
                   id="supplier-phone"
                 >
                   <Input
@@ -312,12 +314,12 @@ export default function SuppliersPage() {
                     name="phone"
                     inputMode="tel"
                     defaultValue={editing?.phone ?? ''}
-                    placeholder="e.g. +855 12 345 678"
+                    placeholder={t('supplierPage.phonePlaceholder')}
                   />
                 </FormField>
                 <FormField
-                  label="Email"
-                  sublabel="(optional)"
+                  label={t('auth.email')}
+                  sublabel={t('common.optional')}
                   id="supplier-email"
                 >
                   <Input
@@ -325,12 +327,12 @@ export default function SuppliersPage() {
                     name="email"
                     type="email"
                     defaultValue={editing?.email ?? ''}
-                    placeholder="orders@example.com"
+                    placeholder={t('supplierPage.emailPlaceholder')}
                   />
                 </FormField>
                 <FormField
-                  label="Address"
-                  sublabel="(optional)"
+                  label={t('branches.address')}
+                  sublabel={t('common.optional')}
                   id="supplier-address"
                 >
                   <Textarea
@@ -339,16 +341,16 @@ export default function SuppliersPage() {
                     defaultValue={editing?.address ?? ''}
                     maxLength={200}
                     rows={3}
-                    placeholder="Street, city, or delivery notes"
+                    placeholder={t('supplierPage.addressPlaceholder')}
                   />
                 </FormField>
                 <Button type="submit" className="mt-1 w-full" disabled={saving}>
                   <Plus size={16} />
                   {saving
-                    ? 'Saving…'
+                    ? t('common.saving')
                     : editing
-                      ? 'Save supplier'
-                      : 'Add supplier'}
+                      ? t('suppliers.save')
+                      : t('supplierPage.add')}
                 </Button>
               </form>
             </article>
@@ -357,10 +359,10 @@ export default function SuppliersPage() {
               <div className="border-b border-border-subtle px-4 py-6 sm:px-8">
                 <div>
                   <h2 className="m-0 text-base font-bold tracking-tight text-text-main">
-                    Supplier directory
+                    {t('supplierPage.directory')}
                   </h2>
                   <p className="mt-1 mb-0 text-xs text-text-muted">
-                    {visibleSuppliers.length} of {suppliers.length} suppliers
+                    {t('supplierPage.count', { shown: visibleSuppliers.length, total: suppliers.length })}
                   </p>
                 </div>
               </div>
@@ -370,15 +372,15 @@ export default function SuppliersPage() {
                     prefixIcon={<Search size={16} />}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search name, phone, email, or address"
+                    placeholder={t('supplierPage.search')}
                     wrapperClassName="sm:max-w-md"
                   />
                   <div className="flex w-full items-center rounded-md border border-border-subtle bg-app p-1 sm:w-auto">
                     {(
                       [
-                        { key: 'active', label: 'Active' },
-                        { key: 'inactive', label: 'Inactive' },
-                        { key: 'all', label: 'All' },
+                        { key: 'active', label: t('common.active') },
+                        { key: 'inactive', label: t('common.inactive') },
+                        { key: 'all', label: t('common.all') },
                       ] as const
                     ).map((filter) => (
                       <Button
@@ -412,7 +414,7 @@ export default function SuppliersPage() {
                           {supplier.name}
                           {!supplier.isActive && (
                             <span className="rounded-full border border-border-subtle bg-muted-surface px-2 py-1 text-xs font-bold text-text-muted">
-                              Inactive
+                              {t('common.inactive')}
                             </span>
                           )}
                         </strong>
@@ -438,34 +440,24 @@ export default function SuppliersPage() {
                           {!supplier.phone &&
                             !supplier.email &&
                             !supplier.address && (
-                              <span>No contact details yet</span>
+                              <span>{t('supplierPage.noContact')}</span>
                             )}
                         </div>
                         {supplier.summary && (
                           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
                             <span>
-                              {supplier.summary.activeProductLinks} linked
-                              product
-                              {supplier.summary.activeProductLinks === 1
-                                ? ''
-                                : 's'}
+                              {t('supplierPage.linkedProducts', { count: supplier.summary.activeProductLinks })}
                             </span>
                             <span>
-                              Received $
-                              {(supplier.summary.receivedSpend / 100).toFixed(
-                                2,
-                              )}
+                              {t('supplierPage.receivedSpend', { amount: `$${(supplier.summary.receivedSpend / 100).toFixed(2)}` })}
                             </span>
                             <span>
-                              Open invoices $
-                              {(
-                                supplier.summary.openInvoiceBalance / 100
-                              ).toFixed(2)}
+                              {t('supplierPage.openInvoices', { amount: `$${(supplier.summary.openInvoiceBalance / 100).toFixed(2)}` })}
                             </span>
                             <span>
                               {supplier.summary.lastOrderAt
-                                ? `Last order ${new Date(supplier.summary.lastOrderAt).toLocaleDateString()}`
-                                : 'No purchase orders yet'}
+                                ? t('supplierPage.lastOrder', { date: new Date(supplier.summary.lastOrderAt).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US') })
+                                : t('supplierPage.noOrders')}
                             </span>
                           </div>
                         )}
@@ -476,7 +468,7 @@ export default function SuppliersPage() {
                           variant="ghost"
                           size="sm"
                         >
-                          View
+                          {t('supplierPage.view')}
                         </ButtonLink>
                         <Button
                           type="button"
@@ -484,7 +476,7 @@ export default function SuppliersPage() {
                           variant="secondary"
                           size="sm"
                         >
-                          Edit
+                          {t('common.edit')}
                         </Button>
                         {supplier.isActive ? (
                           <Button
@@ -493,7 +485,7 @@ export default function SuppliersPage() {
                             variant="dangerSubtle"
                             size="sm"
                           >
-                            Deactivate
+                            {t('supplierPage.deactivate')}
                           </Button>
                         ) : (
                           <Button
@@ -502,7 +494,7 @@ export default function SuppliersPage() {
                             variant="successSubtle"
                             size="sm"
                           >
-                            Reactivate
+                            {t('supplierPage.reactivate')}
                           </Button>
                         )}
                       </div>
@@ -512,11 +504,11 @@ export default function SuppliersPage() {
               ) : (
                 <EmptyState
                   icon={<Truck size={24} />}
-                  title={query ? 'No suppliers found' : 'No suppliers yet'}
+                  title={query ? t('supplierPage.emptySearch') : t('supplierPage.empty')}
                   description={
                     query
-                      ? 'No suppliers match this search.'
-                      : 'Add your first supplier to start purchasing.'
+                      ? t('supplierPage.emptySearchHelp')
+                      : t('supplierPage.emptyHelp')
                   }
                 />
               )}

@@ -1,4 +1,7 @@
+'use client';
+
 import type { ReactNode } from 'react';
+import { useI18n } from '../../lib/i18n';
 
 export type FormFieldProps = {
   label: string;
@@ -23,6 +26,7 @@ export function FormField({
   labelClassName = '',
   id,
 }: FormFieldProps) {
+  const { t } = useI18n();
   return (
     <div className={`flex flex-col gap-1 ${className}`.trim()}>
       <div className="flex items-center justify-between gap-2 leading-none">
@@ -31,7 +35,7 @@ export function FormField({
           className={`text-xs font-bold text-text-secondary select-none ${labelClassName}`.trim()}
         >
           {label}
-          {required && <span className="ml-1 text-rose-500 font-bold" title="Required">*</span>}
+          {required && <span className="ml-1 text-rose-500 font-bold" title={t('common.required')}>*</span>}
         </label>
         {sublabel && (
           <span className="text-[0.75rem] font-normal text-text-muted select-none">
@@ -48,4 +52,3 @@ export function FormField({
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './button';
 import { Input } from './input';
+import { useI18n } from '../../lib/i18n';
 
 type PasswordInputProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -19,6 +20,7 @@ export function PasswordInput({
   wrapperClassName = '',
   ...props
 }: PasswordInputProps) {
+  const { t } = useI18n();
   const [visible, setVisible] = useState(false);
 
   return (
@@ -35,7 +37,7 @@ export function PasswordInput({
         size="icon"
         className="absolute top-0 right-0 h-10 w-10 border-transparent p-0 text-text-muted shadow-none hover:bg-transparent hover:text-text-main"
         onClick={() => setVisible((current) => !current)}
-        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-label={visible ? t('auth.hidePassword') : t('auth.showPassword')}
         aria-pressed={visible}
       >
         {visible ? <EyeOff size={17} /> : <Eye size={17} />}

@@ -22,6 +22,7 @@ import {
   SectionCard,
   Textarea,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -38,6 +39,7 @@ type Settings = {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
@@ -84,7 +86,7 @@ export default function SettingsPage() {
         }
       }
       if (!response.ok) {
-        throw new Error(data.message ?? 'Unable to load business settings.');
+        throw new Error(data.message ?? t('settings.error.load'));
       }
       setSettings(data as Settings);
     } catch (error) {
@@ -92,7 +94,7 @@ export default function SettingsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to load business settings.',
+          : t('settings.error.load'),
       );
     }
   }
@@ -132,15 +134,15 @@ export default function SettingsPage() {
         }
       }
       if (!response.ok) {
-        throw new Error(data.message ?? 'Only the owner can change settings.');
+        throw new Error(data.message ?? t('settings.error.ownerOnly'));
       }
 
       setSettings(data as Settings);
       setIsError(false);
-      setMessage('Business and receipt settings saved successfully.');
+      setMessage(t('settings.success.saved'));
     } catch (error) {
       setIsError(true);
-      setMessage(error instanceof Error ? error.message : 'Save failed.');
+      setMessage(error instanceof Error ? error.message : t('settings.error.save'));
     } finally {
       setIsSaving(false);
     }
@@ -148,7 +150,7 @@ export default function SettingsPage() {
 
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Owner settings" title="Tax & Receipt Settings" />
+      <PageHeading eyebrow={t('settings.eyebrow')} title={t('settings.title')} />
 
       <div>
         <PageContainer>
@@ -168,31 +170,31 @@ export default function SettingsPage() {
             <SectionCard>
               <EmptyState
                 icon={<ShieldAlert size={28} />}
-                title="Access restricted"
-                description="Only the business owner can access these settings."
+                title={t('activity.restricted')}
+                description={t('settings.accessHelp')}
               />
             </SectionCard>
           ) : settings ? (
             <SectionCard
-              title={`${settings.name || 'Business'} configuration`}
-              description="Set inventory, business, and receipt defaults."
+              title={t('settings.configuration', { name: settings.name || t('settings.business') })}
+              description={t('settings.configurationHelp')}
               icon={<Settings2 size={20} />}
             >
               <form className="flex flex-col gap-6" onSubmit={save}>
                 <section>
                   <h3 className="m-0 text-sm font-extrabold tracking-wide text-text-main uppercase">
-                    Business defaults
+                    {t('settings.businessDefaults')}
                   </h3>
                   <p className="mt-1 mb-4 text-xs leading-relaxed text-text-muted">
-                    Applied automatically to new products and sales.
+                    {t('settings.businessDefaultsHelp')}
                   </p>
 
                   <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
                     <FormField
                       id="tax-rate"
-                      label="Tax rate"
+                      label={t('settings.taxRate')}
                       required
-                      sublabel="(percent)"
+                      sublabel={t('settings.percent')}
                     >
                       <Input
                         id="tax-rate"
@@ -211,9 +213,9 @@ export default function SettingsPage() {
 
                     <FormField
                       id="inventory-alert-level"
-                      label="Default inventory alert level"
+                      label={t('settings.inventoryAlert')}
                       required
-                      help="Used when a new product has no custom alert level."
+                      help={t('settings.inventoryAlertHelp')}
                     >
                       <Input
                         id="inventory-alert-level"
@@ -228,28 +230,28 @@ export default function SettingsPage() {
 
                     <FormField
                       id="business-phone"
-                      label="Business phone"
-                      sublabel="(optional)"
+                      label={t('settings.businessPhone')}
+                      sublabel={t('common.optional')}
                     >
                       <Input
                         id="business-phone"
                         name="phone"
                         type="tel"
                         defaultValue={settings.phone ?? ''}
-                        placeholder="e.g. +855 12 345 678"
+                        placeholder={t('supplierPage.phonePlaceholder')}
                       />
                     </FormField>
 
                     <FormField
                       id="business-address"
-                      label="Business address"
-                      sublabel="(optional)"
+                      label={t('settings.businessAddress')}
+                      sublabel={t('common.optional')}
                     >
                       <Input
                         id="business-address"
                         name="address"
                         defaultValue={settings.address ?? ''}
-                        placeholder="e.g. 123 Main Street"
+                        placeholder={t('settings.addressPlaceholder')}
                       />
                     </FormField>
                   </div>
@@ -257,18 +259,18 @@ export default function SettingsPage() {
 
                 <section className="border-t border-border-subtle pt-6">
                   <h3 className="m-0 text-sm font-extrabold tracking-wide text-text-main uppercase">
-                    Receipt details
+                    {t('settings.receiptDetails')}
                   </h3>
                   <p className="mt-1 mb-4 text-xs leading-relaxed text-text-muted">
-                    Keep printed receipts recognizable and useful for customers.
+                    {t('settings.receiptDetailsHelp')}
                   </p>
 
                   <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
                     <FormField
                       id="receipt-prefix"
-                      label="Receipt prefix"
+                      label={t('settings.receiptPrefix')}
                       required
-                      help="A short code shown before each receipt number."
+                      help={t('settings.receiptPrefixHelp')}
                     >
                       <Input
                         id="receipt-prefix"
@@ -276,20 +278,20 @@ export default function SettingsPage() {
                         name="receiptPrefix"
                         maxLength={12}
                         defaultValue={settings.receiptPrefix}
-                        placeholder="e.g. REC"
+                        placeholder={t('settings.receiptPrefixPlaceholder')}
                       />
                     </FormField>
 
                     <FormField
                       id="receipt-footer"
-                      label="Receipt footer message"
-                      sublabel="(optional)"
+                      label={t('settings.receiptFooter')}
+                      sublabel={t('common.optional')}
                     >
                       <Textarea
                         id="receipt-footer"
                         name="receiptFooter"
                         defaultValue={settings.receiptFooter ?? ''}
-                        placeholder="e.g. Thank you for shopping with us!"
+                        placeholder={t('settings.receiptFooterPlaceholder')}
                         className="min-h-20"
                       />
                     </FormField>
@@ -299,7 +301,7 @@ export default function SettingsPage() {
                 <div className="flex justify-end border-t border-border-subtle pt-6">
                   <Button type="submit" disabled={isSaving}>
                     <Save size={16} />
-                    {isSaving ? 'Saving…' : 'Save settings'}
+                    {isSaving ? t('common.saving') : t('hardware.saveSettings')}
                   </Button>
                 </div>
               </form>
@@ -308,8 +310,8 @@ export default function SettingsPage() {
             <SectionCard>
               <EmptyState
                 icon={<Settings2 size={28} />}
-                title="Loading settings"
-                description="Preparing your business configuration."
+                title={t('settings.loading')}
+                description={t('settings.loadingHelp')}
               />
             </SectionCard>
           )}

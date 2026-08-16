@@ -21,6 +21,7 @@ import {
   PageHeading,
 } from '../../components/ui/';
 import { PageContainer } from '../../components/layout/page-container';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 type Product = {
@@ -118,21 +119,22 @@ function TablePager({
   onPageChange: (value: number) => void;
   onPageSizeChange: (value: number) => void;
 }) {
+  const { t } = useI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const start = total ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, total);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-4 py-3 text-xs text-text-muted sm:px-8">
       <span>
-        Showing{' '}
+        {t('purchaseOrders.showing')}{' '}
         <strong className="text-text-secondary">
           {start}–{end}
         </strong>{' '}
-        of <strong className="text-text-secondary">{total}</strong>
+        {t('purchaseOrders.of')} <strong className="text-text-secondary">{total}</strong>
       </span>
       <div className="flex items-center gap-2">
         <label className="inline-flex items-center gap-1.5 whitespace-nowrap">
-          Rows
+          {t('purchaseOrders.rows')}
           <CustomSelect
             value={String(pageSize)}
             onChange={(value) => onPageSizeChange(Number(value))}
@@ -145,7 +147,7 @@ function TablePager({
           />
         </label>
         <span className="whitespace-nowrap">
-          Page {page} of {pages}
+          {t('purchaseOrders.pageCount', { page, pages })}
         </span>
         <Button
           type="button"
@@ -173,6 +175,7 @@ function TablePager({
 }
 
 export default function PurchaseOrdersPage() {
+  const { t, locale } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierCatalog, setSupplierCatalog] = useState<SupplierCatalogItem[]>(
@@ -222,7 +225,7 @@ export default function PurchaseOrdersPage() {
         fetch(`${api}/auth/me`, { headers }),
       ]);
     if (!productResponse.ok || !supplierResponse.ok || !orderResponse.ok)
-      throw new Error('Please sign in as Owner or Manager.');
+      throw new Error(t('purchaseOrders.error.signIn'));
     const catalog: Product[] = await productResponse.json();
     setProducts(catalog);
     setSuppliers(await supplierResponse.json());
@@ -271,7 +274,7 @@ export default function PurchaseOrdersPage() {
         if (!Array.isArray(parsed) && parsed.supplierId)
           void selectSupplier(parsed.supplierId);
         setMessage(
-          'Reorder suggestions added. Review the costs, then create the purchase order.',
+          t('purchaseOrders.message.reorderDraft'),
         );
       } catch {
         /* Ignore an invalid stale browser draft. */
@@ -296,22 +299,22 @@ export default function PurchaseOrdersPage() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
         throw new Error(
-          data.message ?? 'Unable to load this supplier’s catalog.',
+          data.message ?? t('purchaseOrders.error.loadCatalog'),
         );
       setSupplierCatalog(data);
       if (!data.length)
         setMessage(
-          'No products are linked to this supplier yet. Add supplier details in the Product Editor first.',
+          t('purchaseOrders.message.noCatalog'),
         );
       else
         setMessage(
-          'Supplier catalog loaded. Costs are filled from the latest supplier price.',
+          t('purchaseOrders.message.catalogLoaded'),
         );
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to load this supplier’s catalog.',
+          : t('purchaseOrders.error.loadCatalog'),
       );
     } finally {
       setLoadingSupplierCatalog(false);
@@ -333,11 +336,11 @@ export default function PurchaseOrdersPage() {
   }
   function addLine() {
     if (!selectedSupplierId) {
-      setMessage('Select a supplier before adding items.');
+      setMessage(t('purchaseOrders.error.selectSupplier'));
       return;
     }
     if (!target || Number(quantity) < 1) {
-      setMessage('Choose a product or exact variant and quantity.');
+      setMessage(t('purchaseOrders.error.chooseItem'));
       return;
     }
     const parts = target.split(':');
@@ -348,7 +351,7 @@ export default function PurchaseOrdersPage() {
         (line) => line.productId === productId && line.variantId === variantId,
       )
     ) {
-      setMessage('This product or variant is already in the order.');
+      setMessage(t('purchaseOrders.error.duplicateItem'));
       return;
     }
     const catalogItem = supplierCatalog.find(
@@ -382,7 +385,7 @@ export default function PurchaseOrdersPage() {
     event.preventDefault();
     const formElement = event.currentTarget;
     if (!lines.length) {
-      setMessage('Add at least one item before creating an order.');
+      setMessage(t('purchaseOrders.error.addItem'));
       return;
     }
     const form = Object.fromEntries(new FormData(formElement));
@@ -404,17 +407,17 @@ export default function PurchaseOrdersPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to create purchase order.');
+        setMessage(data.message ?? t('purchaseOrders.error.create'));
         return;
       }
       formElement.reset();
       setLines([]);
       setMessage(
-        'Purchase order saved as a draft. Submit it for approval when ready.',
+        t('purchaseOrders.message.created'),
       );
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   function startReceiving(order: Order) {
@@ -442,23 +445,23 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to receive this purchase order.');
+        setMessage(data.message ?? t('purchaseOrders.error.receive'));
         return;
       }
       setReceivingOrderId('');
       setReceivedQuantities({});
       setMessage(
-        'Delivery received. Stock and purchase-order status were updated.',
+        t('purchaseOrders.message.received'),
       );
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   async function cancelOrder(order: Order) {
     if (
       !window.confirm(
-        `Cancel ${order.reference ?? 'this purchase order'}? No stock has been received, and the order will remain in history.`,
+        t('purchaseOrders.confirmCancel', { reference: order.reference ?? t('purchaseOrders.thisOrder') }),
       )
     )
       return;
@@ -469,13 +472,13 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to cancel this purchase order.');
+        setMessage(data.message ?? t('purchaseOrders.error.cancel'));
         return;
       }
-      setMessage('Purchase order cancelled.');
+      setMessage(t('purchaseOrders.message.cancelled'));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   async function submitOrder(order: Order) {
@@ -489,13 +492,13 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to submit this purchase order.');
+        setMessage(data.message ?? t('purchaseOrders.error.submit'));
         return;
       }
-      setMessage('Purchase order submitted for owner approval.');
+      setMessage(t('purchaseOrders.message.submitted'));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   async function approveOrder(order: Order) {
@@ -509,17 +512,17 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to approve this purchase order.');
+        setMessage(data.message ?? t('purchaseOrders.error.approve'));
         return;
       }
-      setMessage('Purchase order approved and marked as ordered.');
+      setMessage(t('purchaseOrders.message.approved'));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   async function rejectOrder(order: Order) {
-    const reason = window.prompt('Why should this purchase order be revised?');
+    const reason = window.prompt(t('purchaseOrders.revisionPrompt'));
     if (!reason?.trim()) return;
     try {
       const response = await fetch(
@@ -532,13 +535,13 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to reject this purchase order.');
+        setMessage(data.message ?? t('purchaseOrders.error.reject'));
         return;
       }
-      setMessage('Purchase order returned to draft with your revision note.');
+      setMessage(t('purchaseOrders.message.rejected'));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   async function dispatchOrder(order: Order) {
@@ -550,20 +553,20 @@ export default function PurchaseOrdersPage() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setMessage(
-          data.message ?? 'Unable to mark this purchase order as sent.',
+          data.message ?? t('purchaseOrders.error.dispatch'),
         );
         return;
       }
-      setMessage('Purchase order marked as sent to the supplier.');
+      setMessage(t('purchaseOrders.message.dispatched'));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   function printOrder(order: Order) {
     const popup = window.open('', '_blank');
     if (!popup) {
-      setMessage('Allow pop-ups to print or save this purchase order.');
+      setMessage(t('purchaseOrders.error.popup'));
       return;
     }
     const escapeHtml = (value: string) =>
@@ -588,8 +591,25 @@ export default function PurchaseOrdersPage() {
       (sum, item) => sum + (item.unitCost ?? 0) * item.quantityOrdered,
       0,
     );
+    const printDate = (value: string) =>
+      new Date(value).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US');
+    const printText = {
+      title: escapeHtml(t('purchaseOrders.print.title')),
+      issued: escapeHtml(t('purchaseOrders.print.issued', { date: printDate(order.createdAt) })),
+      requested: order.expectedDeliveryDate
+        ? escapeHtml(t('purchaseOrders.print.requestedDelivery', { date: printDate(order.expectedDeliveryDate) }))
+        : '',
+      supplier: escapeHtml(t('entity.supplier')),
+      items: escapeHtml(t('purchaseOrders.orderItems')),
+      item: escapeHtml(t('purchaseOrders.print.item')),
+      quantity: escapeHtml(t('suppliers.quantity')),
+      unitCost: escapeHtml(t('suppliers.unitCost')),
+      lineTotal: escapeHtml(t('purchaseOrders.print.lineTotal')),
+      orderTotal: escapeHtml(t('purchaseOrders.print.orderTotal')),
+      notes: escapeHtml(t('purchaseOrders.print.notes')),
+    };
     popup.document.write(
-      `<!doctype html><html><head><title>Purchase order ${escapeHtml(order.reference ?? order.id)}</title><style>body{font-family:Arial,sans-serif;color:#0f172a;max-width:760px;margin:40px auto;padding:0 24px}header{display:flex;justify-content:space-between;border-bottom:2px solid #0f766e;padding-bottom:18px}h1{margin:0;font-size:28px}h2{font-size:16px;margin-top:28px}p{color:#475569;line-height:1.5}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{text-align:left;padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px}th{background:#f8fafc}td:nth-last-child(-n+3),th:nth-last-child(-n+3){text-align:right}.total{text-align:right;font-size:16px;font-weight:bold;margin-top:14px}.note{background:#f8fafc;padding:12px;border-radius:6px}@media print{body{margin:0;max-width:none}}</style></head><body><header><div><h1>Purchase Order</h1><p>${escapeHtml(order.reference ?? order.id)}</p></div><div><strong>${escapeHtml(order.branch.name)}</strong><p>Issued ${new Date(order.createdAt).toLocaleDateString()}${order.expectedDeliveryDate ? `<br>Requested delivery: ${new Date(order.expectedDeliveryDate).toLocaleDateString()}` : ''}</p></div></header><h2>Supplier</h2><p><strong>${escapeHtml(order.supplier.name)}</strong></p><h2>Order items</h2><table><thead><tr><th>Item</th><th>SKU</th><th>Qty</th><th>Unit cost</th><th>Line total</th></tr></thead><tbody>${itemRows}</tbody></table><p class="total">Order total: $${(total / 100).toFixed(2)}</p>${order.note ? `<h2>Notes</h2><p class="note">${escapeHtml(order.note)}</p>` : ''}</body></html>`,
+      `<!doctype html><html lang="${locale}"><head><title>${printText.title} ${escapeHtml(order.reference ?? order.id)}</title><style>body{font-family:Arial,sans-serif;color:#0f172a;max-width:760px;margin:40px auto;padding:0 24px}header{display:flex;justify-content:space-between;border-bottom:2px solid #0f766e;padding-bottom:18px}h1{margin:0;font-size:28px}h2{font-size:16px;margin-top:28px}p{color:#475569;line-height:1.5}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{text-align:left;padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px}th{background:#f8fafc}td:nth-last-child(-n+3),th:nth-last-child(-n+3){text-align:right}.total{text-align:right;font-size:16px;font-weight:bold;margin-top:14px}.note{background:#f8fafc;padding:12px;border-radius:6px}@media print{body{margin:0;max-width:none}}</style></head><body><header><div><h1>${printText.title}</h1><p>${escapeHtml(order.reference ?? order.id)}</p></div><div><strong>${escapeHtml(order.branch.name)}</strong><p>${printText.issued}${printText.requested ? `<br>${printText.requested}` : ''}</p></div></header><h2>${printText.supplier}</h2><p><strong>${escapeHtml(order.supplier.name)}</strong></p><h2>${printText.items}</h2><table><thead><tr><th>${printText.item}</th><th>SKU</th><th>${printText.quantity}</th><th>${printText.unitCost}</th><th>${printText.lineTotal}</th></tr></thead><tbody>${itemRows}</tbody></table><p class="total">${printText.orderTotal}: $${(total / 100).toFixed(2)}</p>${order.note ? `<h2>${printText.notes}</h2><p class="note">${escapeHtml(order.note)}</p>` : ''}</body></html>`,
     );
     popup.document.close();
     popup.focus();
@@ -597,11 +617,11 @@ export default function PurchaseOrdersPage() {
   }
   async function confirmSupplier(order: Order) {
     const reference = window.prompt(
-      'Supplier confirmation/reference number (optional):',
+      t('purchaseOrders.confirmationPrompt'),
     );
     if (reference === null) return;
     const confirmedDeliveryDate = window.prompt(
-      'Confirmed delivery date (YYYY-MM-DD, optional):',
+      t('purchaseOrders.confirmedDatePrompt'),
       order.expectedDeliveryDate?.slice(0, 10) ?? '',
     );
     if (confirmedDeliveryDate === null) return;
@@ -619,13 +639,13 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to record supplier confirmation.');
+        setMessage(data.message ?? t('purchaseOrders.error.confirmSupplier'));
         return;
       }
-      setMessage('Supplier confirmation recorded.');
+      setMessage(t('purchaseOrders.message.supplierConfirmed'));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   async function saveOrderEdit(event: FormEvent<HTMLFormElement>) {
@@ -659,7 +679,7 @@ export default function PurchaseOrdersPage() {
             (!Number.isInteger(item.unitCost) || item.unitCost < 0)),
       )
     ) {
-      setMessage('Enter whole quantities and valid non-negative costs.');
+      setMessage(t('purchaseOrders.error.validValues'));
       return;
     }
     if (
@@ -667,12 +687,12 @@ export default function PurchaseOrdersPage() {
       (editRemovedItemIds.length || addedItems.length)
     ) {
       setMessage(
-        'A supplier change request can revise quantities, costs, and delivery date, but cannot add or remove products.',
+        t('purchaseOrders.error.changeLimits'),
       );
       return;
     }
     if (editMode === 'CHANGE_REQUEST' && !changeReason.trim()) {
-      setMessage('Enter a reason for the requested change.');
+      setMessage(t('purchaseOrders.error.changeReason'));
       return;
     }
     try {
@@ -700,7 +720,7 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to update this purchase order.');
+        setMessage(data.message ?? t('purchaseOrders.error.update'));
         return;
       }
       setEditingOrder(null);
@@ -709,12 +729,12 @@ export default function PurchaseOrdersPage() {
       setChangeReason('');
       setMessage(
         editMode === 'CHANGE_REQUEST'
-          ? 'Change request submitted for owner approval.'
-          : 'Purchase order updated.',
+          ? t('purchaseOrders.message.changeSubmitted')
+          : t('purchaseOrders.message.updated'),
       );
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   function startOrderEdit(order: Order) {
@@ -744,13 +764,13 @@ export default function PurchaseOrdersPage() {
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.message ?? 'Unable to approve this change request.');
+        setMessage(data.message ?? t('purchaseOrders.error.approveChange'));
         return;
       }
-      setMessage('Purchase-order changes approved and applied.');
+      setMessage(t('purchaseOrders.message.changeApproved'));
       await load();
     } catch {
-      setMessage('The API server did not return a response.');
+      setMessage(t('purchaseOrders.error.api'));
     }
   }
   function addEditLine() {
@@ -760,7 +780,7 @@ export default function PurchaseOrdersPage() {
       !Number.isInteger(Number(editQuantity)) ||
       Number(editQuantity) < 1
     ) {
-      setMessage('Choose a product or variant and a whole quantity.');
+      setMessage(t('purchaseOrders.error.chooseWholeQuantity'));
       return;
     }
     const [kind, productId, variantId] = editTarget.split(':');
@@ -784,7 +804,7 @@ export default function PurchaseOrdersPage() {
           item.productId === productId && item.variantId === resolvedVariantId,
       )
     ) {
-      setMessage('This product or variant is already in the order.');
+      setMessage(t('purchaseOrders.error.duplicateItem'));
       return;
     }
     const product = products.find((item) => item.id === productId);
@@ -815,8 +835,8 @@ export default function PurchaseOrdersPage() {
       ? `v:${item.productId}:${item.variantId}`
       : `p:${item.productId}`,
     label: item.variant
-      ? `${item.product.name} — ${item.variant.name} · ${item.supplierSku || item.variant.sku}${item.isPreferred ? ' · Preferred' : ''}`
-      : `${item.product.name} · ${item.supplierSku || item.product.sku}${item.isPreferred ? ' · Preferred' : ''}`,
+      ? `${item.product.name} — ${item.variant.name} · ${item.supplierSku || item.variant.sku}${item.isPreferred ? ` · ${t('suppliers.preferred')}` : ''}`
+      : `${item.product.name} · ${item.supplierSku || item.product.sku}${item.isPreferred ? ` · ${t('suppliers.preferred')}` : ''}`,
   }));
   const filteredOrders = useMemo(
     () =>
@@ -844,7 +864,7 @@ export default function PurchaseOrdersPage() {
     const variant = product?.variants.find(
       (item) => item.id === line.variantId,
     );
-    return `${product?.name ?? 'Product'}${variant ? ` · ${variant.name}` : ''}`;
+    return `${product?.name ?? t('entity.product')}${variant ? ` · ${variant.name}` : ''}`;
   };
   const statusBadge = (value: string) => {
     const received = value === 'RECEIVED';
@@ -861,7 +881,7 @@ export default function PurchaseOrdersPage() {
       <span
         className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold ${className}`}
       >
-        {value.replace(/_/g, ' ')}
+        {t(`purchaseOrders.status.${value}` as Parameters<typeof t>[0])}
       </span>
     );
   };
@@ -872,7 +892,7 @@ export default function PurchaseOrdersPage() {
       new Date().setHours(0, 0, 0, 0);
   return (
     <main className="app-page">
-      <PageHeading eyebrow="Purchasing" title="Purchase orders" />
+      <PageHeading eyebrow={t('supplierPage.purchasing')} title={t('purchaseOrders.title')} />
       <div>
         <PageContainer>
           {message && (
@@ -888,10 +908,10 @@ export default function PurchaseOrdersPage() {
                 </div>
                 <div>
                   <h2 className="m-0 text-base font-bold tracking-tight text-text-main">
-                    Create purchase order
+                    {t('purchaseOrders.create')}
                   </h2>
                   <p className="mt-1 mb-0 text-xs text-text-muted">
-                    Choose a supplier to load saved items and costs.
+                    {t('purchaseOrders.createHelp')}
                   </p>
                 </div>
               </div>
@@ -901,38 +921,38 @@ export default function PurchaseOrdersPage() {
                 className="flex flex-col gap-4 px-4 py-6 sm:px-8"
               >
                 <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-                  <FormField label="Supplier" required>
+                  <FormField label={t('entity.supplier')} required>
                     <CustomSelect
                       name="supplierId"
                       value={selectedSupplierId}
                       onChange={(value) => void selectSupplier(value)}
-                      placeholder="Select supplier"
+                      placeholder={t('purchaseOrders.selectSupplier')}
                       options={suppliers.map((supplier) => ({
                         value: supplier.id,
                         label: supplier.name,
                       }))}
                     />
                   </FormField>
-                  <FormField label="Supplier reference" sublabel="(optional)">
-                    <Input name="reference" placeholder="e.g. PO-2026-001" />
+                  <FormField label={t('purchaseOrders.supplierReference')} sublabel={t('common.optional')}>
+                    <Input name="reference" placeholder={t('purchaseOrders.referencePlaceholder')} />
                   </FormField>
-                  <FormField label="Expected delivery" sublabel="(optional)">
+                  <FormField label={t('purchaseOrders.expectedDelivery')} sublabel={t('common.optional')}>
                     <Input name="expectedDeliveryDate" type="date" />
                   </FormField>
                 </div>
-                <FormField label="Note" sublabel="(optional)">
+                <FormField label={t('purchaseOrders.note')} sublabel={t('common.optional')}>
                   <Input
                     name="note"
-                    placeholder="e.g. Delivery expected Monday"
+                    placeholder={t('purchaseOrders.notePlaceholder')}
                   />
                 </FormField>
                 <div className="rounded-lg border border-border-subtle bg-muted-surface p-5">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <strong className="text-sm font-bold text-text-main">
-                      Order items
+                      {t('purchaseOrders.orderItems')}
                     </strong>
                     <span className="text-xs text-text-muted">
-                      {lines.length} item{lines.length === 1 ? '' : 's'}
+                      {t('purchaseOrders.itemCount', { count: lines.length })}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_6rem_8rem_auto]">
@@ -946,12 +966,12 @@ export default function PurchaseOrdersPage() {
                       onChange={chooseTarget}
                       placeholder={
                         loadingSupplierCatalog
-                          ? 'Loading supplier products…'
+                          ? t('purchaseOrders.loadingSupplierProducts')
                           : !selectedSupplierId
-                            ? 'Select supplier first'
+                            ? t('purchaseOrders.selectSupplierFirst')
                             : !supplierCatalog.length
-                              ? 'No linked products'
-                              : 'Product or exact variant'
+                              ? t('purchaseOrders.noLinkedProducts')
+                              : t('purchaseOrders.productOrVariant')
                       }
                       options={productOptions}
                     />
@@ -961,7 +981,7 @@ export default function PurchaseOrdersPage() {
                       step="1"
                       value={quantity}
                       onChange={(event) => setQuantity(event.target.value)}
-                      placeholder="Qty"
+                      placeholder={t('suppliers.quantity')}
                     />
                     <Input
                       type="number"
@@ -969,7 +989,7 @@ export default function PurchaseOrdersPage() {
                       step="0.01"
                       value={unitCost}
                       onChange={(event) => setUnitCost(event.target.value)}
-                      placeholder="Cost (USD)"
+                      placeholder={t('purchaseOrders.costUsd')}
                     />
                     <Button
                       type="button"
@@ -978,7 +998,7 @@ export default function PurchaseOrdersPage() {
                       size="md"
                     >
                       <Plus size={16} />
-                      Add
+                      {t('common.add')}
                     </Button>
                   </div>
                   {lines.length > 0 && (
@@ -994,12 +1014,12 @@ export default function PurchaseOrdersPage() {
                             </strong>
                             {line.unitCost && (
                               <span className="ml-2 text-xs text-text-muted">
-                                ${line.unitCost} each
+                                {t('purchaseOrders.each', { amount: `$${line.unitCost}` })}
                               </span>
                             )}
                           </div>
                           <Button
-                            aria-label={`Remove ${itemName(line)}`}
+                            aria-label={t('purchaseOrders.removeNamed', { name: itemName(line) })}
                             type="button"
                             onClick={() =>
                               setLines((current) =>
@@ -1026,7 +1046,7 @@ export default function PurchaseOrdersPage() {
                 <div className="flex justify-end">
                   <Button type="submit">
                     <ClipboardList size={16} />
-                    Create purchase order
+                    {t('purchaseOrders.create')}
                   </Button>
                 </div>
               </form>
@@ -1037,28 +1057,28 @@ export default function PurchaseOrdersPage() {
               </div>
               <div>
                 <h2 className="m-0 text-base font-bold tracking-tight text-text-main">
-                  Receiving flow
+                  {t('purchaseOrders.receivingFlow')}
                 </h2>
                 <p className="mt-1 mb-0 text-xs leading-relaxed text-text-muted">
-                  Create an order, then receive delivered quantities below.
+                  {t('purchaseOrders.receivingHelp')}
                 </p>
               </div>
               <div className="mt-5 flex flex-col gap-3">
                 {[
                   [
                     '1',
-                    'Create order',
-                    'Save supplier, product, quantity, and cost.',
+                    t('purchaseOrders.stepCreate'),
+                    t('purchaseOrders.stepCreateHelp'),
                   ],
                   [
                     '2',
-                    'Receive delivery',
-                    'Receive all or part of the ordered stock.',
+                    t('purchaseOrders.stepReceive'),
+                    t('purchaseOrders.stepReceiveHelp'),
                   ],
                   [
                     '3',
-                    'Track history',
-                    'Stock and activity update automatically.',
+                    t('purchaseOrders.stepTrack'),
+                    t('purchaseOrders.stepTrackHelp'),
                   ],
                 ].map(([number, title, text]) => (
                   <div key={number} className="flex gap-3">
@@ -1098,14 +1118,14 @@ export default function PurchaseOrdersPage() {
                       className="m-0 text-xl font-bold tracking-tight text-text-main"
                     >
                       {editMode === 'CHANGE_REQUEST'
-                        ? 'Request purchase-order change'
-                        : 'Edit purchase order'}
+                        ? t('purchaseOrders.requestChange')
+                        : t('purchaseOrders.edit')}
                     </h2>
                     <p className="mt-1 mb-0 text-xs text-text-muted">
                       {editingOrder.supplier.name} ·{' '}
                       {editMode === 'CHANGE_REQUEST'
-                        ? 'An owner must approve this change before it is applied.'
-                        : 'Changes are available until receiving begins.'}
+                        ? t('purchaseOrders.ownerApprovalHelp')
+                        : t('purchaseOrders.editHelp')}
                     </p>
                   </div>
                   <Button
@@ -1113,7 +1133,7 @@ export default function PurchaseOrdersPage() {
                     onClick={() => setEditingOrder(null)}
                     variant="ghost"
                     size="icon"
-                    aria-label="Close purchase order editor"
+                    aria-label={t('purchaseOrders.closeEditor')}
                   >
                     <X size={18} />
                   </Button>
@@ -1123,30 +1143,30 @@ export default function PurchaseOrdersPage() {
                   className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-6 sm:px-8"
                 >
                   {editMode === 'CHANGE_REQUEST' && (
-                    <FormField label="Reason for change">
+                    <FormField label={t('purchaseOrders.changeReason')}>
                       <Input
                         value={changeReason}
                         onChange={(event) =>
                           setChangeReason(event.target.value)
                         }
-                        placeholder="Supplier changed cost, quantity, or delivery date"
+                        placeholder={t('purchaseOrders.changeReasonPlaceholder')}
                       />
                     </FormField>
                   )}
                   <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-                    <FormField label="Supplier reference">
+                    <FormField label={t('purchaseOrders.supplierReference')}>
                       <Input
                         name="reference"
                         defaultValue={editingOrder.reference ?? ''}
                       />
                     </FormField>
-                    <FormField label="Note">
+                    <FormField label={t('purchaseOrders.note')}>
                       <Input
                         name="note"
                         defaultValue={editingOrder.note ?? ''}
                       />
                     </FormField>
-                    <FormField label="Expected delivery">
+                    <FormField label={t('purchaseOrders.expectedDelivery')}>
                       <Input
                         name="expectedDeliveryDate"
                         type="date"
@@ -1173,7 +1193,7 @@ export default function PurchaseOrdersPage() {
                               {item.product.sku}
                             </span>
                           </strong>
-                          <FormField label="Quantity">
+                          <FormField label={t('suppliers.quantity')}>
                             <Input
                               required
                               name={`quantity-${item.id}`}
@@ -1183,7 +1203,7 @@ export default function PurchaseOrdersPage() {
                               defaultValue={item.quantityOrdered}
                             />
                           </FormField>
-                          <FormField label="Unit cost (USD)">
+                          <FormField label={t('purchaseOrders.unitCostUsd')}>
                             <Input
                               name={`cost-${item.id}`}
                               type="number"
@@ -1207,7 +1227,7 @@ export default function PurchaseOrdersPage() {
                             variant="dangerSubtle"
                             size="sm"
                           >
-                            Remove
+                            {t('common.remove')}
                           </Button>
                         </div>
                       ))}
@@ -1225,13 +1245,13 @@ export default function PurchaseOrdersPage() {
                         className="grid grid-cols-1 items-end gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 md:grid-cols-[minmax(0,1fr)_7rem_8rem_auto]"
                       >
                         <strong className="text-sm font-bold text-text-main">
-                          {product?.name ?? 'Product'}
+                          {product?.name ?? t('entity.product')}
                           {variant ? ` · ${variant.name}` : ''}
                           <span className="mt-1 block text-xs font-normal text-emerald-700">
-                            New line
+                            {t('purchaseOrders.newLine')}
                           </span>
                         </strong>
-                        <FormField label="Quantity">
+                        <FormField label={t('suppliers.quantity')}>
                           <Input
                             type="number"
                             min="1"
@@ -1248,7 +1268,7 @@ export default function PurchaseOrdersPage() {
                             }
                           />
                         </FormField>
-                        <FormField label="Unit cost (USD)">
+                        <FormField label={t('purchaseOrders.unitCostUsd')}>
                           <Input
                             type="number"
                             min="0"
@@ -1275,17 +1295,17 @@ export default function PurchaseOrdersPage() {
                           variant="dangerSubtle"
                           size="sm"
                         >
-                          Remove
+                          {t('common.remove')}
                         </Button>
                       </div>
                     );
                   })}
                   <div className="grid grid-cols-1 items-end gap-3 rounded-md border border-dashed border-border-default p-3 md:grid-cols-[minmax(0,1fr)_7rem_8rem_auto]">
-                    <FormField label="Add product or variant">
+                    <FormField label={t('purchaseOrders.addProductOrVariant')}>
                       <CustomSelect
                         value={editTarget}
                         onChange={setEditTarget}
-                        placeholder="Select item"
+                        placeholder={t('purchaseOrders.selectItem')}
                         options={products.flatMap((product) =>
                           product.variants.length
                             ? product.variants.map((variant) => ({
@@ -1301,7 +1321,7 @@ export default function PurchaseOrdersPage() {
                         )}
                       />
                     </FormField>
-                    <FormField label="Quantity">
+                    <FormField label={t('suppliers.quantity')}>
                       <Input
                         type="number"
                         min="1"
@@ -1312,7 +1332,7 @@ export default function PurchaseOrdersPage() {
                         }
                       />
                     </FormField>
-                    <FormField label="Unit cost (USD)">
+                    <FormField label={t('purchaseOrders.unitCostUsd')}>
                       <Input
                         type="number"
                         min="0"
@@ -1329,11 +1349,11 @@ export default function PurchaseOrdersPage() {
                       variant="successSubtle"
                       size="sm"
                     >
-                      Add line
+                      {t('purchaseOrders.addLine')}
                     </Button>
                   </div>
                   <div className="flex justify-end">
-                    <Button type="submit">Save changes</Button>
+                    <Button type="submit">{t('common.saveChanges')}</Button>
                   </div>
                 </form>
               </section>
@@ -1343,11 +1363,10 @@ export default function PurchaseOrdersPage() {
             <div className="border-b border-border-subtle px-4 py-6 sm:px-8">
               <div>
                 <h2 className="m-0 text-base font-bold tracking-tight text-text-main">
-                  Purchase order history
+                  {t('purchaseOrders.history')}
                 </h2>
                 <p className="mt-1 mb-0 text-xs text-text-muted">
-                  {filteredOrders.length} of {orders.length} orders ·{' '}
-                  {openCount} open
+                  {t('purchaseOrders.historyCount', { shown: filteredOrders.length, total: orders.length, open: openCount })}
                 </p>
               </div>
             </div>
@@ -1359,15 +1378,15 @@ export default function PurchaseOrdersPage() {
                   setQuery(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Search supplier, reference, or product"
+                placeholder={t('purchaseOrders.search')}
                 wrapperClassName="sm:max-w-md"
               />
               <div className="flex w-full items-center rounded-md border border-border-subtle bg-app p-1 sm:w-auto">
                 {(
                   [
-                    { key: 'all', label: 'All' },
-                    { key: 'open', label: 'Open' },
-                    { key: 'received', label: 'Received' },
+                    { key: 'all', label: t('common.all') },
+                    { key: 'open', label: t('purchaseOrders.open') },
+                    { key: 'received', label: t('supplierDetail.status.received') },
                   ] as const
                 ).map((filter) => (
                   <Button
@@ -1393,12 +1412,12 @@ export default function PurchaseOrdersPage() {
                     <thead>
                       <tr className="border-b border-border-subtle bg-muted-surface">
                         {[
-                          'Order',
-                          'Supplier',
-                          'Items',
-                          'Progress',
-                          'Status',
-                          'Actions',
+                          t('purchaseOrders.order'),
+                          t('entity.supplier'),
+                          t('purchaseOrders.items'),
+                          t('purchaseOrders.progress'),
+                          t('purchaseOrders.status'),
+                          t('purchaseOrders.actions'),
                         ].map((heading) => (
                           <th
                             key={heading}
@@ -1416,9 +1435,9 @@ export default function PurchaseOrdersPage() {
                             className="border-b border-border-subtle hover:bg-muted-surface"
                           >
                             <td className="whitespace-nowrap px-4 py-3 text-text-muted">
-                              {order.reference ?? 'No reference'}
+                              {order.reference ?? t('supplierDetail.noReference')}
                               <div className="mt-1 text-xs text-text-muted">
-                                {new Date(order.createdAt).toLocaleDateString()}
+                                {new Date(order.createdAt).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US')}
                                 {order.expectedDeliveryDate && (
                                   <>
                                     <br />
@@ -1430,11 +1449,11 @@ export default function PurchaseOrdersPage() {
                                       }
                                     >
                                       {isOrderOverdue(order)
-                                        ? 'Overdue · '
-                                        : 'Due · '}
+                                        ? t('purchaseOrders.overduePrefix')
+                                        : t('purchaseOrders.duePrefix')}
                                       {new Date(
                                         order.expectedDeliveryDate,
-                                      ).toLocaleDateString()}
+                                      ).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US')}
                                     </span>
                                   </>
                                 )}
@@ -1469,41 +1488,36 @@ export default function PurchaseOrdersPage() {
                               {statusBadge(order.status)}
                               {order.approvedBy && (
                                 <div className="mt-1 text-xs text-text-muted">
-                                  Approved by {order.approvedBy.firstName}{' '}
-                                  {order.approvedBy.lastName}
+                                  {t('purchaseOrders.approvedBy', { name: `${order.approvedBy.firstName} ${order.approvedBy.lastName}` })}
                                 </div>
                               )}
                               {order.rejectionReason && (
                                 <div className="mt-1 text-xs text-rose-700">
-                                  Revision needed: {order.rejectionReason}
+                                  {t('purchaseOrders.revisionNeeded', { reason: order.rejectionReason })}
                                 </div>
                               )}
                               {order.dispatchedAt && (
                                 <div className="mt-1 text-xs text-brand">
-                                  Sent{' '}
-                                  {new Date(
-                                    order.dispatchedAt,
-                                  ).toLocaleDateString()}
+                                  {t('purchaseOrders.sentDate', { date: new Date(order.dispatchedAt).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US') })}
                                   {order.dispatchedBy
-                                    ? ` by ${order.dispatchedBy.firstName} ${order.dispatchedBy.lastName}`
+                                    ? t('purchaseOrders.byNamed', { name: `${order.dispatchedBy.firstName} ${order.dispatchedBy.lastName}` })
                                     : ''}
                                 </div>
                               )}
                               {order.supplierConfirmedAt && (
                                 <div className="mt-1 text-xs text-blue-700">
-                                  Supplier confirmed
+                                  {t('purchaseOrders.supplierConfirmed')}
                                   {order.supplierConfirmationReference
                                     ? ` · ${order.supplierConfirmationReference}`
                                     : ''}
                                   {order.confirmedDeliveryDate
-                                    ? ` · delivery ${new Date(order.confirmedDeliveryDate).toLocaleDateString()}`
+                                    ? ` · ${t('purchaseOrders.deliveryDate', { date: new Date(order.confirmedDeliveryDate).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US') })}`
                                     : ''}
                                 </div>
                               )}
                               {order.changeRequests[0] && (
                                 <div className="mt-1 text-xs text-amber-700">
-                                  Change pending:{' '}
-                                  {order.changeRequests[0].reason}
+                                  {t('purchaseOrders.changePending', { reason: order.changeRequests[0].reason })}
                                 </div>
                               )}
                             </td>
@@ -1518,7 +1532,7 @@ export default function PurchaseOrdersPage() {
                                         variant="secondary"
                                         size="sm"
                                       >
-                                        Edit
+                                        {t('common.edit')}
                                       </Button>
                                       <Button
                                         type="button"
@@ -1526,7 +1540,7 @@ export default function PurchaseOrdersPage() {
                                         variant="successSubtle"
                                         size="sm"
                                       >
-                                        Submit
+                                        {t('purchaseOrders.submit')}
                                       </Button>
                                     </>
                                   )}
@@ -1541,7 +1555,7 @@ export default function PurchaseOrdersPage() {
                                           variant="successSubtle"
                                           size="sm"
                                         >
-                                          Approve & order
+                                          {t('purchaseOrders.approveAndOrder')}
                                         </Button>
                                         <Button
                                           type="button"
@@ -1551,7 +1565,7 @@ export default function PurchaseOrdersPage() {
                                           variant="dangerSubtle"
                                           size="sm"
                                         >
-                                          Request changes
+                                          {t('purchaseOrders.requestChanges')}
                                         </Button>
                                       </>
                                     )}
@@ -1565,7 +1579,7 @@ export default function PurchaseOrdersPage() {
                                         variant="secondary"
                                         size="sm"
                                       >
-                                        Print / save PDF
+                                        {t('purchaseOrders.printPdf')}
                                       </Button>
                                       {order.status === 'ORDERED' &&
                                         !order.dispatchedAt && (
@@ -1577,7 +1591,7 @@ export default function PurchaseOrdersPage() {
                                             variant="successSubtle"
                                             size="sm"
                                           >
-                                            Mark sent
+                                            {t('purchaseOrders.markSent')}
                                           </Button>
                                         )}
                                       {order.status === 'ORDERED' &&
@@ -1591,7 +1605,7 @@ export default function PurchaseOrdersPage() {
                                             variant="secondary"
                                             size="sm"
                                           >
-                                            Supplier confirmed
+                                            {t('purchaseOrders.supplierConfirmed')}
                                           </Button>
                                         )}
                                       {order.status === 'ORDERED' &&
@@ -1605,7 +1619,7 @@ export default function PurchaseOrdersPage() {
                                             variant="warningSubtle"
                                             size="sm"
                                           >
-                                            Request change
+                                            {t('purchaseOrders.requestChangeShort')}
                                           </Button>
                                         )}
                                       {order.status === 'ORDERED' &&
@@ -1621,7 +1635,7 @@ export default function PurchaseOrdersPage() {
                                             variant="successSubtle"
                                             size="sm"
                                           >
-                                            Approve change
+                                            {t('purchaseOrders.approveChange')}
                                           </Button>
                                         )}
                                       <Button
@@ -1631,7 +1645,7 @@ export default function PurchaseOrdersPage() {
                                         size="sm"
                                       >
                                         <PackageCheck size={15} />
-                                        Receive
+                                        {t('purchaseOrders.receive')}
                                       </Button>
                                     </>
                                   )}
@@ -1644,7 +1658,7 @@ export default function PurchaseOrdersPage() {
                                       variant="dangerSubtle"
                                       size="sm"
                                     >
-                                      Cancel
+                                      {t('common.cancel')}
                                     </Button>
                                   )}
                                 </span>
@@ -1669,10 +1683,10 @@ export default function PurchaseOrdersPage() {
                                   <div className="mb-4 flex items-start justify-between gap-3">
                                     <div>
                                       <strong className="text-sm font-bold text-text-main">
-                                        Receive delivery
+                                        {t('purchaseOrders.receiveDelivery')}
                                       </strong>
                                       <span className="ml-2 text-xs text-text-muted">
-                                        Enter only what arrived today.
+                                        {t('purchaseOrders.receiveTodayHelp')}
                                       </span>
                                     </div>
                                     <Button
@@ -1684,7 +1698,7 @@ export default function PurchaseOrdersPage() {
                                       variant="ghost"
                                       size="sm"
                                     >
-                                      Cancel
+                                      {t('common.cancel')}
                                     </Button>
                                   </div>
                                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1696,7 +1710,7 @@ export default function PurchaseOrdersPage() {
                                         <FormField
                                           key={item.id}
                                           label={`${item.product.name}${item.variant ? ` · ${item.variant.name}` : ''}`}
-                                          sublabel={`${remaining} remaining`}
+                                          sublabel={t('purchaseOrders.remaining', { count: remaining })}
                                         >
                                           <Input
                                             type="number"
@@ -1721,7 +1735,7 @@ export default function PurchaseOrdersPage() {
                                   <div className="mt-4 flex justify-end">
                                     <Button type="submit">
                                       <PackageCheck size={16} />
-                                      Record delivery
+                                      {t('purchaseOrders.recordDelivery')}
                                     </Button>
                                   </div>
                                 </form>
@@ -1746,7 +1760,7 @@ export default function PurchaseOrdersPage() {
               </>
             ) : (
               <div className="px-4 py-8 text-center text-sm text-text-muted sm:px-8">
-                No purchase orders match this filter.
+                {t('purchaseOrders.emptyFilter')}
               </div>
             )}
           </section>

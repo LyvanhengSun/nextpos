@@ -39,6 +39,7 @@ import {
   StatusBadge,
   SummaryMetricCard,
 } from '../../components/ui/';
+import { useI18n } from '../../lib/i18n';
 
 const api = '/api';
 
@@ -62,33 +63,6 @@ type Promotion = {
 type Product = { id: string; name: string; categoryId: string | null };
 type Category = { id: string; name: string };
 
-const templateOptions = [
-  {
-    key: 'percent' as const,
-    label: 'Percentage off',
-    description: 'Discount by percent.',
-    icon: Percent,
-  },
-  {
-    key: 'fixed' as const,
-    label: 'Fixed discount',
-    description: 'Subtract a set amount.',
-    icon: BadgeDollarSign,
-  },
-  {
-    key: 'bogo' as const,
-    label: 'Buy X, get Y',
-    description: 'Free items after a quantity.',
-    icon: Gift,
-  },
-  {
-    key: 'custom' as const,
-    label: 'Custom rule',
-    description: 'Choose type and scope.',
-    icon: Settings2,
-  },
-];
-
 function authHeaders() {
   const token =
     typeof window === 'undefined'
@@ -102,9 +76,9 @@ function authHeaders() {
   };
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, locale: string) {
   if (!value) return null;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale === 'km' ? 'km-KH' : 'en-US', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -112,6 +86,7 @@ function formatDate(value: string | null) {
 }
 
 export default function PromotionsPage() {
+  const { t, locale } = useI18n();
   const formRef = useRef<HTMLFormElement>(null);
   const [items, setItems] = useState<Promotion[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -155,7 +130,7 @@ export default function PromotionsPage() {
         !productResponse.ok ||
         !categoryResponse.ok
       ) {
-        throw new Error('Unable to load promotion data. Please sign in again.');
+        throw new Error(t('promotions.error.loadSignIn'));
       }
 
       const [promotionList, productList, categoryList] = await Promise.all([
@@ -171,13 +146,13 @@ export default function PromotionsPage() {
       notify(
         error instanceof Error
           ? error.message
-          : 'Unable to load promotion data.',
+          : t('promotions.error.load'),
         'error',
       );
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -219,7 +194,7 @@ export default function PromotionsPage() {
         message?: string;
       };
       if (!response.ok) {
-        throw new Error(data.message ?? 'Unable to save promotion.');
+        throw new Error(data.message ?? t('promotions.error.save'));
       }
 
       formRef.current?.reset();
@@ -231,11 +206,11 @@ export default function PromotionsPage() {
       setStartsAt('');
       setEndsAt('');
       setIsCreateOpen(false);
-      notify('Promotion saved and ready to apply at checkout.');
+      notify(t('promotions.success.saved'));
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to save promotion.',
+        error instanceof Error ? error.message : t('promotions.error.save'),
         'error',
       );
     } finally {
@@ -251,12 +226,12 @@ export default function PromotionsPage() {
         method: 'POST',
         headers: authHeaders(),
       });
-      if (!response.ok) throw new Error('Unable to update promotion.');
-      notify(`${item.name} ${item.isActive ? 'deactivated' : 'activated'}.`);
+      if (!response.ok) throw new Error(t('promotions.error.update'));
+      notify(t(item.isActive ? 'promotions.success.deactivated' : 'promotions.success.activated', { name: item.name }));
       await load();
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to update promotion.',
+        error instanceof Error ? error.message : t('promotions.error.update'),
         'error',
       );
     } finally {
@@ -302,48 +277,54 @@ export default function PromotionsPage() {
     () => new Map(categories.map((category) => [category.id, category.name])),
     [categories],
   );
+  const templateOptions = [
+    { key: 'percent' as const, label: t('promotions.percentageOff'), description: t('promotions.percentHelp'), icon: Percent },
+    { key: 'fixed' as const, label: t('promotions.fixedDiscount'), description: t('promotions.fixedHelp'), icon: BadgeDollarSign },
+    { key: 'bogo' as const, label: t('promotions.buyGet'), description: t('promotions.buyGetHelp'), icon: Gift },
+    { key: 'custom' as const, label: t('promotions.customRule'), description: t('promotions.customHelp'), icon: Settings2 },
+  ];
 
   function promotionOffer(item: Promotion) {
     if (item.type === 'BUY_X_GET_Y') {
-      return `Buy ${item.buyQuantity}, get ${item.rewardQuantity} free`;
+      return t('promotions.offerBuyGet', { buy: item.buyQuantity, get: item.rewardQuantity });
     }
     if (item.type === 'PERCENT') {
-      return `${Number((item.value / 100).toFixed(2))}% off`;
+      return t('promotions.offerPercent', { value: Number((item.value / 100).toFixed(2)) });
     }
-    return `$${(item.value / 100).toFixed(2)} off`;
+    return t('promotions.offerFixed', { value: `$${(item.value / 100).toFixed(2)}` });
   }
 
   function promotionScope(item: Promotion) {
     if (item.productId)
-      return productNames.get(item.productId) ?? 'Selected product';
+      return productNames.get(item.productId) ?? t('promotions.selectedProduct');
     if (item.categoryId)
-      return categoryNames.get(item.categoryId) ?? 'Selected category';
-    return 'Entire order';
+      return categoryNames.get(item.categoryId) ?? t('promotions.selectedCategory');
+    return t('promotions.entireOrder');
   }
 
   function promotionStatus(item: Promotion) {
     const now = new Date();
     if (!item.isActive)
       return {
-        label: 'Inactive',
+        label: t('common.inactive'),
         tone: 'neutral' as const,
       };
     if (item.endsAt && new Date(item.endsAt) < now)
-      return { label: 'Expired', tone: 'danger' as const };
+      return { label: t('promotions.expired'), tone: 'danger' as const };
     if (item.startsAt && new Date(item.startsAt) > now)
-      return { label: 'Scheduled', tone: 'warning' as const };
-    return { label: 'Active', tone: 'success' as const };
+      return { label: t('promotions.scheduled'), tone: 'warning' as const };
+    return { label: t('common.active'), tone: 'success' as const };
   }
 
   return (
     <main className="app-page">
       <PageHeading
-        eyebrow="Sales promotions"
-        title="Promotions"
+        eyebrow={t('promotions.eyebrow')}
+        title={t('promotions.title')}
         actions={
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus size={16} />
-            New promotion
+            {t('promotions.new')}
           </Button>
         }
       />
@@ -367,14 +348,14 @@ export default function PromotionsPage() {
                     size="sm"
                     onClick={() => void load()}
                   >
-                    Retry
+                    {t('promotions.retry')}
                   </Button>
                 ) : (
                   <Button
                     variant="ghost"
                     size="bareIcon"
                     onClick={() => setMessage('')}
-                    aria-label="Dismiss message"
+                    aria-label={t('promotions.dismiss')}
                     className="text-inherit hover:bg-transparent"
                   >
                     <X size={16} />
@@ -388,26 +369,26 @@ export default function PromotionsPage() {
 
           <section
             className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3"
-            aria-label="Promotion summary"
+            aria-label={t('promotions.summary')}
           >
             <SummaryMetricCard
-              title="Active offers"
+              title={t('promotions.activeOffers')}
               value={activeCount}
-              description={`${items.length} total`}
+              description={t('promotions.totalCount', { count: items.length })}
               icon={<Sparkles size={20} />}
               tone="emerald"
             />
             <SummaryMetricCard
-              title="Scheduled"
+              title={t('promotions.scheduled')}
               value={scheduledCount}
-              description="Starts later"
+              description={t('promotions.startsLater')}
               icon={<CalendarDays size={20} />}
               tone="sky"
             />
             <SummaryMetricCard
-              title="Targeted offers"
+              title={t('promotions.targetedOffers')}
               value={targetedCount}
-              description="Item rules"
+              description={t('promotions.itemRules')}
               icon={<Target size={20} />}
               tone="purple"
             />
@@ -415,8 +396,8 @@ export default function PromotionsPage() {
 
           {isCreateOpen && (
             <Modal
-              title="Create promotion"
-              description="Set the offer, scope, and schedule."
+              title={t('promotions.create')}
+              description={t('promotions.createHelp')}
               icon={<Tag size={19} />}
               onClose={() => setIsCreateOpen(false)}
               size="xl"
@@ -424,7 +405,7 @@ export default function PromotionsPage() {
             >
               <div className="mb-4">
                 <p className="mb-3 text-xs font-bold uppercase tracking-wider text-text-secondary">
-                  Promotion template
+                  {t('promotions.template')}
                 </p>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {templateOptions.map((option) => {
@@ -456,7 +437,7 @@ export default function PromotionsPage() {
               <form ref={formRef} onSubmit={create} className="space-y-4">
                 <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2">
                   <FormField
-                    label="Promotion name"
+                    label={t('promotions.name')}
                     required
                     id="promotion-name"
                   >
@@ -464,10 +445,10 @@ export default function PromotionsPage() {
                       id="promotion-name"
                       required
                       name="name"
-                      placeholder="e.g. Weekend coffee sale"
+                      placeholder={t('promotions.namePlaceholder')}
                     />
                   </FormField>
-                  <FormField label="Discount type" required>
+                  <FormField label={t('promotions.discountType')} required>
                     <CustomSelect
                       value={type}
                       onChange={(value) => {
@@ -477,23 +458,23 @@ export default function PromotionsPage() {
                         if (nextType === 'BUY_X_GET_Y') setScope('PRODUCT');
                       }}
                       options={[
-                        { value: 'PERCENT', label: 'Percentage off' },
-                        { value: 'FIXED', label: 'Fixed amount off' },
-                        { value: 'BUY_X_GET_Y', label: 'Buy X, get Y free' },
+                        { value: 'PERCENT', label: t('promotions.percentageOff') },
+                        { value: 'FIXED', label: t('promotions.fixedAmountOff') },
+                        { value: 'BUY_X_GET_Y', label: t('promotions.buyGetFree') },
                       ]}
                       leadingIcon={<CircleDollarSign size={16} />}
                     />
                   </FormField>
 
                   {type !== 'BUY_X_GET_Y' && (
-                    <FormField label="Apply to" required>
+                    <FormField label={t('promotions.applyTo')} required>
                       <CustomSelect
                         value={scope}
                         onChange={(value) => setScope(value as PromotionScope)}
                         options={[
-                          { value: 'ORDER', label: 'Entire order' },
-                          { value: 'CATEGORY', label: 'One category' },
-                          { value: 'PRODUCT', label: 'One product' },
+                          { value: 'ORDER', label: t('promotions.entireOrder') },
+                          { value: 'CATEGORY', label: t('promotions.oneCategory') },
+                          { value: 'PRODUCT', label: t('promotions.oneProduct') },
                         ]}
                         leadingIcon={<Target size={16} />}
                       />
@@ -501,12 +482,12 @@ export default function PromotionsPage() {
                   )}
 
                   {scope === 'CATEGORY' && type !== 'BUY_X_GET_Y' && (
-                    <FormField label="Category" required>
+                    <FormField label={t('expenses.category')} required>
                       <CustomSelect
                         name="categoryId"
                         value={categoryId}
                         onChange={setCategoryId}
-                        placeholder="Select category"
+                        placeholder={t('promotions.selectCategory')}
                         options={categories.map((category) => ({
                           value: category.id,
                           label: category.name,
@@ -516,12 +497,12 @@ export default function PromotionsPage() {
                   )}
 
                   {(scope === 'PRODUCT' || type === 'BUY_X_GET_Y') && (
-                    <FormField label="Product" required>
+                    <FormField label={t('entity.product')} required>
                       <CustomSelect
                         name="productId"
                         value={productId}
                         onChange={setProductId}
-                        placeholder="Select product"
+                        placeholder={t('promotions.selectProduct')}
                         options={products.map((product) => ({
                           value: product.id,
                           label: product.name,
@@ -533,7 +514,7 @@ export default function PromotionsPage() {
                   {type === 'BUY_X_GET_Y' ? (
                     <>
                       <FormField
-                        label="Customer buys"
+                        label={t('promotions.customerBuys')}
                         required
                         id="buy-quantity"
                       >
@@ -548,7 +529,7 @@ export default function PromotionsPage() {
                         />
                       </FormField>
                       <FormField
-                        label="Customer gets free"
+                        label={t('promotions.customerGets')}
                         required
                         id="reward-quantity"
                       >
@@ -566,7 +547,7 @@ export default function PromotionsPage() {
                   ) : (
                     <FormField
                       label={
-                        type === 'PERCENT' ? 'Percentage off' : 'Amount off'
+                        type === 'PERCENT' ? t('promotions.percentageOff') : t('promotions.amountOff')
                       }
                       required
                       id="promotion-value"
@@ -589,8 +570,8 @@ export default function PromotionsPage() {
                   )}
 
                   <FormField
-                    label="Minimum order"
-                    sublabel="(optional)"
+                    label={t('promotions.minimumOrder')}
+                    sublabel={t('common.optional')}
                     id="minimum-spend"
                   >
                     <Input
@@ -603,7 +584,7 @@ export default function PromotionsPage() {
                       prefixText="$"
                     />
                   </FormField>
-                  <FormField label="Starts" sublabel="(optional)">
+                  <FormField label={t('promotions.starts')} sublabel={t('common.optional')}>
                     <DatePicker
                       name="startsAt"
                       value={startsAt}
@@ -611,16 +592,16 @@ export default function PromotionsPage() {
                         setStartsAt(value);
                         if (endsAt && value > endsAt) setEndsAt('');
                       }}
-                      placeholder="Select start date"
+                      placeholder={t('promotions.selectStart')}
                     />
                   </FormField>
-                  <FormField label="Ends" sublabel="(optional)">
+                  <FormField label={t('promotions.ends')} sublabel={t('common.optional')}>
                     <DatePicker
                       name="endsAt"
                       value={endsAt}
                       onChange={setEndsAt}
                       min={startsAt || undefined}
-                      placeholder="Select end date"
+                      placeholder={t('promotions.selectEnd')}
                     />
                   </FormField>
                 </div>
@@ -628,7 +609,7 @@ export default function PromotionsPage() {
                 <div className="flex justify-end border-t border-border-subtle pt-5">
                   <Button type="submit" disabled={isSaving}>
                     <Plus size={16} />
-                    {isSaving ? 'Saving…' : 'Save promotion'}
+                    {isSaving ? t('common.saving') : t('promotions.save')}
                   </Button>
                 </div>
               </form>
@@ -636,8 +617,8 @@ export default function PromotionsPage() {
           )}
 
           <SectionCard
-            title="Your promotions"
-            description={`${items.length} configured`}
+            title={t('promotions.yours')}
+            description={t('promotions.configured', { count: items.length })}
             icon={<Tag size={20} />}
             actions={
               <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-muted-strong px-2.5 py-1 text-xs font-bold text-text-secondary">
@@ -651,8 +632,8 @@ export default function PromotionsPage() {
                 <div className="divide-y divide-border-subtle md:hidden">
                   {items.map((item) => {
                     const status = promotionStatus(item);
-                    const start = formatDate(item.startsAt);
-                    const end = formatDate(item.endsAt);
+                    const start = formatDate(item.startsAt, locale);
+                    const end = formatDate(item.endsAt, locale);
 
                     return (
                       <article key={item.id} className="px-4 py-4">
@@ -678,7 +659,7 @@ export default function PromotionsPage() {
                         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-y border-border-subtle py-3 text-xs">
                           <div className="min-w-0">
                             <dt className="font-bold uppercase tracking-wider text-text-muted">
-                              Applies to
+                              {t('promotions.appliesTo')}
                             </dt>
                             <dd className="mt-1 mb-0 truncate font-semibold text-text-main">
                               {promotionScope(item)}
@@ -686,18 +667,18 @@ export default function PromotionsPage() {
                           </div>
                           <div className="min-w-0">
                             <dt className="font-bold uppercase tracking-wider text-text-muted">
-                              Schedule
+                              {t('promotions.schedule')}
                             </dt>
                             <dd className="mt-1 mb-0 font-semibold text-text-main">
                               {start || end
-                                ? `${start ?? 'Now'} – ${end ?? 'No end'}`
-                                : 'Always'}
+                                ? `${start ?? t('shifts.now')} – ${end ?? t('promotions.noEnd')}`
+                                : t('promotions.always')}
                             </dd>
                           </div>
                           {item.minimumSpend > 0 && (
                             <div className="col-span-2">
                               <dt className="font-bold uppercase tracking-wider text-text-muted">
-                                Minimum order
+                                {t('promotions.minimumOrder')}
                               </dt>
                               <dd className="mt-1 mb-0 font-semibold text-text-main">
                                 ${(item.minimumSpend / 100).toFixed(2)}
@@ -716,10 +697,10 @@ export default function PromotionsPage() {
                             onClick={() => void toggle(item)}
                           >
                             {togglingId === item.id
-                              ? 'Updating…'
+                              ? t('promotions.updating')
                               : item.isActive
-                                ? 'Deactivate'
-                                : 'Activate'}
+                                ? t('products.deactivateAction')
+                                : t('products.activateAction')}
                           </Button>
                         </div>
                       </article>
@@ -731,19 +712,19 @@ export default function PromotionsPage() {
                   <table className="w-full min-w-[900px] border-collapse text-left">
                     <thead className="bg-muted-surface text-xs font-bold uppercase tracking-wider text-text-secondary">
                       <tr className="border-b border-border-subtle">
-                        <th className="px-4 py-3 sm:pl-8">Promotion</th>
-                        <th className="px-4 py-3">Offer</th>
-                        <th className="px-4 py-3">Applies to</th>
-                        <th className="px-4 py-3">Schedule</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3 text-right sm:pr-8">Action</th>
+                        <th className="px-4 py-3 sm:pl-8">{t('promotions.promotion')}</th>
+                        <th className="px-4 py-3">{t('promotions.offer')}</th>
+                        <th className="px-4 py-3">{t('promotions.appliesTo')}</th>
+                        <th className="px-4 py-3">{t('promotions.schedule')}</th>
+                        <th className="px-4 py-3">{t('purchaseOrders.status')}</th>
+                        <th className="px-4 py-3 text-right sm:pr-8">{t('promotions.action')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.map((item) => {
                         const status = promotionStatus(item);
-                        const start = formatDate(item.startsAt);
-                        const end = formatDate(item.endsAt);
+                        const start = formatDate(item.startsAt, locale);
+                        const end = formatDate(item.endsAt, locale);
                         return (
                           <tr
                             key={item.id}
@@ -763,8 +744,7 @@ export default function PromotionsPage() {
                               {promotionOffer(item)}
                               {item.minimumSpend > 0 && (
                                 <span className="mt-0.5 block text-xs font-normal text-text-muted">
-                                  Minimum $
-                                  {(item.minimumSpend / 100).toFixed(2)}
+                                  {t('promotions.minimumAmount', { amount: `$${(item.minimumSpend / 100).toFixed(2)}` })}
                                 </span>
                               )}
                             </td>
@@ -773,8 +753,8 @@ export default function PromotionsPage() {
                             </td>
                             <td className="px-4 py-4 text-sm text-text-secondary">
                               {start || end
-                                ? `${start ?? 'Now'} – ${end ?? 'No end'}`
-                                : 'Always'}
+                                ? `${start ?? t('shifts.now')} – ${end ?? t('promotions.noEnd')}`
+                                : t('promotions.always')}
                             </td>
                             <td className="px-4 py-4">
                               <StatusBadge tone={status.tone}>
@@ -793,10 +773,10 @@ export default function PromotionsPage() {
                                 onClick={() => void toggle(item)}
                               >
                                 {togglingId === item.id
-                                  ? 'Updating…'
+                                  ? t('promotions.updating')
                                   : item.isActive
-                                    ? 'Deactivate'
-                                    : 'Activate'}
+                                    ? t('products.deactivateAction')
+                                    : t('products.activateAction')}
                               </Button>
                             </td>
                           </tr>
@@ -809,11 +789,11 @@ export default function PromotionsPage() {
             ) : (
               <EmptyState
                 icon={<Tag size={24} />}
-                title={isLoading ? 'Loading promotions' : 'No promotions yet'}
+                title={isLoading ? t('promotions.loading') : t('promotions.empty')}
                 description={
                   isLoading
-                    ? 'Loading checkout offers.'
-                    : 'Create your first checkout offer.'
+                    ? t('promotions.loadingHelp')
+                    : t('promotions.emptyHelp')
                 }
                 className="min-h-40"
               />

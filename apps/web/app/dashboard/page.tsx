@@ -29,6 +29,20 @@ import {
 } from '../../components/ui/';
 import { PageContainer } from '../../components/layout/page-container';
 import type { SalesTrendPoint } from '../../components/dashboard/sales-trend-chart';
+import { useI18n } from '../../lib/i18n';
+
+function SalesTrendLoading() {
+  const { t } = useI18n();
+  return (
+    <SectionCard
+      title={t('dashboard.trendTitle')}
+      description={t('dashboard.trendDescription')}
+      bodyClassName="h-64 animate-pulse bg-muted-surface sm:h-72"
+    >
+      <span className="sr-only">{t('dashboard.loadingTrend')}</span>
+    </SectionCard>
+  );
+}
 
 const SalesTrendChart = dynamic(
   () =>
@@ -37,15 +51,7 @@ const SalesTrendChart = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <SectionCard
-        title="7-day sales trend"
-        description="Daily revenue and transactions."
-        bodyClassName="h-64 animate-pulse bg-muted-surface sm:h-72"
-      >
-        <span className="sr-only">Loading sales trend</span>
-      </SectionCard>
-    ),
+    loading: SalesTrendLoading,
   },
 );
 
@@ -132,6 +138,7 @@ function DashboardNotice({
   type: 'success' | 'error';
   onDismiss: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={`flex items-center gap-2.5 rounded-lg border px-4 py-3 text-sm font-medium ${
@@ -151,7 +158,7 @@ function DashboardNotice({
         size="bareIcon"
         onClick={onDismiss}
         className="shrink-0 text-inherit hover:bg-transparent"
-        aria-label="Dismiss message"
+        aria-label={t('dashboard.dismissMessage')}
       >
         <X size={16} />
       </Button>
@@ -183,23 +190,24 @@ function DashboardActionLink({
 }
 
 function QuickActions() {
+  const { t } = useI18n();
   return (
     <div className="flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>a]:shrink-0">
       <ButtonLink href="/pos">
         <Calculator size={16} />
-        Open POS
+        {t('dashboard.openPos')}
       </ButtonLink>
       <ButtonLink href="/products" variant="secondary">
         <Package size={16} />
-        Products
+        {t('entity.products')}
       </ButtonLink>
       <ButtonLink href="/inventory" variant="secondary">
         <Archive size={16} />
-        Inventory
+        {t('nav.inventory')}
       </ButtonLink>
       <ButtonLink href="/reports" variant="secondary">
         <BarChart3 size={16} />
-        Daily Report
+        {t('dashboard.dailyReport')}
       </ButtonLink>
     </div>
   );
@@ -246,12 +254,13 @@ function OpenShiftsCard({
   shifts: Overview['openShifts'];
   amount: (value: number) => string;
 }) {
+  const { t } = useI18n();
   return (
     <SectionCard
-      title="Open Cash Shifts"
+      title={t('dashboard.openCashShifts')}
       actions={
         <DashboardActionLink href="/shifts">
-          Manage shifts →
+          {t('dashboard.manageShifts')}
         </DashboardActionLink>
       }
       bodyClassName="space-y-2"
@@ -267,23 +276,28 @@ function OpenShiftsCard({
             </span>
             <span className="text-text-muted">{shift.branch}</span>
             <span className="font-bold text-brand sm:text-right">
-              Opening: {amount(shift.openingCash)}
+              {t('dashboard.openingAmount', {
+                amount: amount(shift.openingCash),
+              })}
             </span>
           </div>
         ))
       ) : (
-        <EmptyText>No open shifts currently.</EmptyText>
+        <EmptyText>{t('dashboard.noOpenShifts')}</EmptyText>
       )}
     </SectionCard>
   );
 }
 
 function LowStockCard({ items }: { items: Overview['lowStock'] }) {
+  const { t } = useI18n();
   return (
     <SectionCard
-      title="Low Stock Alerts"
+      title={t('dashboard.lowStockAlerts')}
       actions={
-        <DashboardActionLink href="/inventory">Inventory →</DashboardActionLink>
+        <DashboardActionLink href="/inventory">
+          {t('nav.inventory')} →
+        </DashboardActionLink>
       }
       bodyClassName="space-y-2"
     >
@@ -295,18 +309,23 @@ function LowStockCard({ items }: { items: Overview['lowStock'] }) {
           >
             <span className="font-semibold text-amber-900">{item.product}</span>
             <span className="font-bold text-rose-600">
-              {item.quantity} remaining (Alert @ {item.reorderLevel})
+              {t('dashboard.remainingAlert', {
+                quantity: item.quantity,
+                level: item.reorderLevel,
+              })}
             </span>
           </div>
         ))
       ) : (
-        <EmptyText>All products are adequately stocked.</EmptyText>
+        <EmptyText>{t('dashboard.stockHealthy')}</EmptyText>
       )}
     </SectionCard>
   );
 }
 
-function paymentMethodLabel(value: string) {
+function paymentMethodLabel(value: string, cash: string, card: string) {
+  if (value === 'CASH') return cash;
+  if (value === 'CARD') return card;
   return value
     .toLowerCase()
     .split('_')
@@ -321,22 +340,25 @@ function RecentSalesCard({
   sales: Overview['recentSales'];
   amount: (value: number) => string;
 }) {
+  const { t, locale } = useI18n();
   return (
     <SectionCard
-      title="Recent sales"
-      description="Latest completed transactions."
+      title={t('dashboard.recentSales')}
+      description={t('dashboard.latestSales')}
       actions={
-        <DashboardActionLink href="/sales">View sales →</DashboardActionLink>
+        <DashboardActionLink href="/sales">
+          {t('dashboard.viewSales')}
+        </DashboardActionLink>
       }
       bodyPadding={false}
     >
       {sales.length ? (
         <div>
           <div className="hidden grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(7rem,0.65fr)_auto] gap-4 border-b border-border-subtle bg-muted-surface px-8 py-3 text-xs font-bold uppercase tracking-wider text-text-secondary sm:grid">
-            <span>Sale</span>
-            <span>Branch</span>
-            <span>Payment</span>
-            <span className="text-right">Total</span>
+            <span>{t('dashboard.sale')}</span>
+            <span>{t('entity.branch')}</span>
+            <span>{t('dashboard.payment')}</span>
+            <span className="text-right">{t('dashboard.total')}</span>
           </div>
           <div className="divide-y divide-border-subtle">
             {sales.map((sale) => {
@@ -355,15 +377,15 @@ function RecentSalesCard({
                     </span>
                     <span className="min-w-0">
                       <strong className="block truncate font-bold text-text-main">
-                        Sale #{saleNumber}
+                        {t('dashboard.saleNumber', { number: saleNumber })}
                       </strong>
                       <span className="mt-0.5 block text-xs text-text-muted">
-                        {createdAt.toLocaleDateString(undefined, {
+                        {createdAt.toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US', {
                           month: 'short',
                           day: 'numeric',
                         })}{' '}
                         ·{' '}
-                        {createdAt.toLocaleTimeString(undefined, {
+                        {createdAt.toLocaleTimeString(locale === 'km' ? 'km-KH' : 'en-US', {
                           hour: 'numeric',
                           minute: '2-digit',
                         })}
@@ -382,7 +404,11 @@ function RecentSalesCard({
                     </span>
                   </span>
                   <span className="pl-12 text-xs font-bold text-text-secondary sm:order-3 sm:pl-0 sm:text-sm">
-                    {paymentMethodLabel(sale.paymentMethod)}
+                    {paymentMethodLabel(
+                      sale.paymentMethod,
+                      t('payment.cash'),
+                      t('payment.card'),
+                    )}
                   </span>
                 </Link>
               );
@@ -391,7 +417,7 @@ function RecentSalesCard({
         </div>
       ) : (
         <div className="px-4 py-6 sm:px-8">
-          <EmptyText>No completed sales yet.</EmptyText>
+          <EmptyText>{t('dashboard.noCompletedSales')}</EmptyText>
         </div>
       )}
     </SectionCard>
@@ -405,43 +431,51 @@ function DashboardMetricsGrid({
   overview: Overview | null;
   amount: (value: number) => string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-2 xl:grid-cols-4">
       <SummaryMetricCard
-        title="Today's revenue"
+        title={t('dashboard.todayRevenue')}
         value={amount(overview?.salesTotal ?? 0)}
         description={
           overview?.payments.length
             ? overview.payments
-                .map((payment) => `${payment.method}: ${amount(payment.total)}`)
+                .map(
+                  (payment) =>
+                    `${paymentMethodLabel(
+                      payment.method,
+                      t('payment.cash'),
+                      t('payment.card'),
+                    )}: ${amount(payment.total)}`,
+                )
                 .join(' · ')
-            : 'No sales today'
+            : t('dashboard.noSalesToday')
         }
         icon={<TrendingUp size={20} />}
         tone="purple"
       />
       <SummaryMetricCard
-        title="Total transactions"
+        title={t('dashboard.totalTransactions')}
         value={overview?.transactionCount ?? 0}
-        description="Completed orders"
+        description={t('dashboard.completedOrders')}
         icon={<Calculator size={20} />}
         tone="amber"
       />
       <SummaryMetricCard
-        title="Average ticket"
+        title={t('dashboard.averageTicket')}
         value={amount(
           overview?.transactionCount
             ? Math.round((overview.salesTotal ?? 0) / overview.transactionCount)
             : 0,
         )}
-        description="Average per order"
+        description={t('dashboard.averageOrder')}
         icon={<BarChart3 size={20} />}
         tone="sky"
       />
       <SummaryMetricCard
-        title="Open cash shifts"
+        title={t('dashboard.openCashShifts')}
         value={overview?.openShifts.length ?? 0}
-        description="Active registers"
+        description={t('dashboard.activeRegisters')}
         icon={<Clock size={20} />}
         tone="emerald"
       />
@@ -462,6 +496,7 @@ function PurchaseOrderApprovalsCard({
   onApprove: (id: string, reference: string | null) => void;
   onReject: (id: string, reference: string | null) => void;
 }) {
+  const { t } = useI18n();
   if (!approvals.length) return null;
 
   return (
@@ -470,14 +505,14 @@ function PurchaseOrderApprovalsCard({
         <div>
           <h3 className="m-0 flex items-center gap-2 text-base font-bold text-amber-900">
             <AlertTriangle size={16} />
-            Purchase-order approvals ({approvals.length})
+            {t('dashboard.approvals', { count: approvals.length })}
           </h3>
           <p className="mt-1 mb-0 text-xs text-amber-700">
-            Approve submitted orders before receiving.
+            {t('dashboard.approvalHelp')}
           </p>
         </div>
         <DashboardActionLink href="/purchase-orders" strong>
-          View all →
+          {t('dashboard.viewAll')}
         </DashboardActionLink>
       </div>
       <div className="flex flex-col gap-2">
@@ -488,10 +523,10 @@ function PurchaseOrderApprovalsCard({
           >
             <div className="min-w-0">
               <strong className="block text-sm text-text-main">
-                {order.reference || 'Purchase order'} · {order.supplier}
+                {order.reference || t('dashboard.purchaseOrder')} · {order.supplier}
               </strong>
               <span className="mt-1 block text-xs text-text-muted">
-                Submitted by {order.submittedBy}{' '}
+                {t('dashboard.submittedBy', { name: order.submittedBy })}{' '}
                 {order.submittedAt ? `· ${dateLabel(order.submittedAt)}` : ''} ·{' '}
                 {amount(order.total)}
               </span>
@@ -503,7 +538,7 @@ function PurchaseOrderApprovalsCard({
                 variant="successSubtle"
                 size="sm"
               >
-                Approve & order
+                {t('dashboard.approveOrder')}
               </Button>
               <Button
                 type="button"
@@ -511,7 +546,7 @@ function PurchaseOrderApprovalsCard({
                 variant="dangerSubtle"
                 size="sm"
               >
-                Request changes
+                {t('dashboard.requestChanges')}
               </Button>
             </span>
           </div>
@@ -530,6 +565,7 @@ function ProcurementAlertsCard({
   amount: (value: number) => string;
   dateLabel: (value: string | null) => string;
 }) {
+  const { t } = useI18n();
   const alerts = overview?.procurementAlerts;
   const hasNoAlerts =
     overview &&
@@ -540,57 +576,63 @@ function ProcurementAlertsCard({
 
   return (
     <SectionCard
-      title="Procurement Alerts"
+      title={t('dashboard.procurementAlerts')}
       actions={
         <div className="flex flex-wrap gap-3">
           <DashboardActionLink href="/purchase-orders">
-            Purchase orders →
+            {t('dashboard.purchaseOrders')}
           </DashboardActionLink>
           <DashboardActionLink href="/supplier-invoices">
-            Invoices →
+            {t('dashboard.invoices')}
           </DashboardActionLink>
         </div>
       }
     >
       {hasNoAlerts ? (
         <EmptyText>
-          No overdue orders, upcoming deliveries, or overdue supplier invoices.
+          {t('dashboard.noProcurementAlerts')}
         </EmptyText>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <AlertList
-            title="Overdue deliveries"
-            empty="No overdue purchase orders."
+            title={t('dashboard.overdueDeliveries')}
+            empty={t('dashboard.noOverdueOrders')}
             toneClassName="text-red-600"
             href="/purchase-orders"
             items={alerts?.overduePurchaseOrders ?? []}
             render={(order) => (
               <>
-                <strong>{order.reference || 'Purchase order'}</strong>
+                <strong>{order.reference || t('dashboard.purchaseOrder')}</strong>
                 <span>
-                  {order.supplier} · due {dateLabel(order.expectedDeliveryDate)}
+                  {t('dashboard.dueDate', {
+                    supplier: order.supplier,
+                    date: dateLabel(order.expectedDeliveryDate),
+                  })}
                 </span>
               </>
             )}
           />
           <AlertList
-            title="Due this week"
-            empty="No upcoming deliveries."
+            title={t('dashboard.dueThisWeek')}
+            empty={t('dashboard.noUpcomingDeliveries')}
             toneClassName="text-amber-600"
             href="/purchase-orders"
             items={alerts?.upcomingPurchaseOrders ?? []}
             render={(order) => (
               <>
-                <strong>{order.reference || 'Purchase order'}</strong>
+                <strong>{order.reference || t('dashboard.purchaseOrder')}</strong>
                 <span>
-                  {order.supplier} · due {dateLabel(order.expectedDeliveryDate)}
+                  {t('dashboard.dueDate', {
+                    supplier: order.supplier,
+                    date: dateLabel(order.expectedDeliveryDate),
+                  })}
                 </span>
               </>
             )}
           />
           <AlertList
-            title="Overdue invoices"
-            empty="No overdue supplier invoices."
+            title={t('dashboard.overdueInvoices')}
+            empty={t('dashboard.noOverdueInvoices')}
             toneClassName="text-red-600"
             href="/supplier-invoices"
             items={alerts?.overdueSupplierInvoices ?? []}
@@ -598,7 +640,10 @@ function ProcurementAlertsCard({
               <>
                 <strong>{invoice.invoiceNumber}</strong>
                 <span>
-                  {invoice.supplier} · {amount(invoice.balance)} outstanding
+                  {t('dashboard.outstanding', {
+                    supplier: invoice.supplier,
+                    amount: amount(invoice.balance),
+                  })}
                 </span>
               </>
             )}
@@ -610,6 +655,7 @@ function ProcurementAlertsCard({
 }
 
 export default function DashboardPage() {
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -670,7 +716,7 @@ export default function DashboardPage() {
       if (overviewResponse.ok) setOverview(await overviewResponse.json());
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : 'Unable to load dashboard.',
+        error instanceof Error ? error.message : t('dashboard.error.load'),
         'error',
       );
     }
@@ -686,10 +732,14 @@ export default function DashboardPage() {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      notify(data.message ?? 'Unable to approve this purchase order.', 'error');
+      notify(data.message ?? t('dashboard.error.approveOrder'), 'error');
       return;
     }
-    notify(`${reference || 'Purchase order'} approved and marked as ordered.`);
+    notify(
+      t('dashboard.success.approvedOrder', {
+        reference: reference || t('dashboard.purchaseOrder'),
+      }),
+    );
     await load();
   }
 
@@ -705,11 +755,14 @@ export default function DashboardPage() {
     );
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      notify(data.message ?? 'Unable to reject this purchase order.', 'error');
+      notify(data.message ?? t('dashboard.error.rejectOrder'), 'error');
       return;
     }
     notify(
-      `${rejectionTarget.reference || 'Purchase order'} returned to draft for revision.`,
+      t('dashboard.success.returnedToDraft', {
+        reference:
+          rejectionTarget.reference || t('dashboard.purchaseOrder'),
+      }),
     );
     setRejectionTarget(null);
     setRejectionReason('');
@@ -718,14 +771,20 @@ export default function DashboardPage() {
 
   const amount = (value: number) => `$${(value / 100).toFixed(2)}`;
   const dateLabel = (value: string | null) =>
-    value ? new Date(value).toLocaleDateString() : 'No date';
+    value
+      ? new Date(value).toLocaleDateString(locale === 'km' ? 'km-KH' : 'en-US')
+      : t('dashboard.noDate');
   const roleLabel =
-    role === 'OWNER' ? 'Owner' : role === 'MANAGER' ? 'Manager' : 'User';
+    role === 'OWNER'
+      ? t('dashboard.owner')
+      : role === 'MANAGER'
+        ? t('dashboard.manager')
+        : t('dashboard.user');
   return (
     <main className="w-full pb-16">
       <PageHeading
-        eyebrow={`${roleLabel} dashboard`}
-        title={`Welcome, ${name || roleLabel}`}
+        eyebrow={t('dashboard.eyebrow', { role: roleLabel })}
+        title={t('dashboard.welcome', { name: name || roleLabel })}
       />
 
       <div>
@@ -789,7 +848,7 @@ export default function DashboardPage() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Request purchase-order changes"
+          aria-label={t('dashboard.changeDialog')}
           className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/45 p-4"
         >
           <form
@@ -798,21 +857,25 @@ export default function DashboardPage() {
           >
             <header className="border-b border-border-subtle px-4 py-6 sm:px-8">
               <h2 className="m-0 text-xl font-bold tracking-tight text-text-main">
-                Request changes
+                {t('dashboard.requestChanges')}
               </h2>
               <p className="mt-1 mb-0 text-xs text-text-muted">
-                Explain what must be revised before this order can be approved.
+                {t('dashboard.changeHelp')}
               </p>
             </header>
             <div className="px-4 py-6 sm:px-8">
-              <FormField label="Revision reason" required id="rejection-reason">
+              <FormField
+                label={t('dashboard.revisionReason')}
+                required
+                id="rejection-reason"
+              >
                 <Textarea
                   id="rejection-reason"
                   required
                   autoFocus
                   value={rejectionReason}
                   onChange={(event) => setRejectionReason(event.target.value)}
-                  placeholder="e.g. Confirm the item quantity and supplier cost"
+                  placeholder={t('dashboard.revisionPlaceholder')}
                   rows={4}
                 />
               </FormField>
@@ -825,10 +888,10 @@ export default function DashboardPage() {
                   setRejectionReason('');
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" variant="danger">
-                Request changes
+                {t('dashboard.requestChanges')}
               </Button>
             </footer>
           </form>

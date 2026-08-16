@@ -32,26 +32,29 @@ import {
   getDeviceSettings,
   saveDeviceSettings as persistDeviceSettings,
 } from '../../lib/';
+import { useI18n } from '../../lib/i18n';
 
 function ReceiptPreview({ settings }: { settings: DeviceSettings }) {
+  const { t } = useI18n();
   return (
     <div className="mx-auto w-full max-w-sm rounded-lg border border-dashed border-border-default bg-card p-5 text-center shadow-sm">
       <ReceiptText size={24} className="mx-auto mb-3 text-text-muted" />
       <h3 className="m-0 text-base font-bold tracking-tight text-text-main">
-        {settings.terminalName || 'POS Terminal'}
+        {settings.terminalName || t('hardware.posTerminal')}
       </h3>
       <p className="mt-1 mb-3 text-xs text-text-muted">
-        Printer test · {settings.receiptWidth} mm
+        {t('hardware.printerTest', { width: settings.receiptWidth })}
       </p>
       <div className="border-y border-dashed border-border-default py-3 text-sm text-text-secondary">
-        <p className="m-0 font-semibold">POS System is ready.</p>
+        <p className="m-0 font-semibold">{t('hardware.systemReady')}</p>
       </div>
-      <p className="mt-3 mb-0 text-sm font-bold text-text-main">Thank you!</p>
+      <p className="mt-3 mb-0 text-sm font-bold text-text-main">{t('hardware.thankYou')}</p>
     </div>
   );
 }
 
 export default function HardwarePage() {
+  const { t } = useI18n();
   const [settings, setSettings] = useState<DeviceSettings>(
     defaultDeviceSettings,
   );
@@ -75,10 +78,10 @@ export default function HardwarePage() {
   function saveSettings() {
     try {
       persistDeviceSettings(settings);
-      setMessage('Hardware settings saved on this device.');
+      setMessage(t('hardware.success.saved'));
       setMessageTone('success');
     } catch {
-      setMessage('Unable to save hardware settings on this device.');
+      setMessage(t('hardware.error.save'));
       setMessageTone('error');
     }
   }
@@ -94,8 +97,8 @@ export default function HardwarePage() {
     const code = event.currentTarget.value.trim();
     setScanResult(
       code
-        ? `Scanner received ${code}.`
-        : 'No barcode received. Scan again, then press Enter.',
+        ? t('hardware.scannerReceived', { code })
+        : t('hardware.noBarcode'),
     );
     setScanTone(code ? 'success' : 'error');
     event.currentTarget.value = '';
@@ -105,13 +108,13 @@ export default function HardwarePage() {
   return (
     <main className="app-page hardware">
       <PageHeading
-        eyebrow="Terminal setup"
-        title="Hardware"
+        eyebrow={t('hardware.eyebrow')}
+        title={t('hardware.title')}
         className="print-hide"
         actions={
           <Button onClick={saveSettings}>
             <Save size={16} />
-            Save settings
+            {t('hardware.saveSettings')}
           </Button>
         }
       />
@@ -135,18 +138,18 @@ export default function HardwarePage() {
 
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
             <SectionCard
-              title="Terminal and receipt printer"
-              description="Set device and receipt defaults."
+              title={t('hardware.terminalPrinter')}
+              description={t('hardware.terminalPrinterHelp')}
               icon={<Settings2 size={20} />}
               className="h-full"
             >
               <form onSubmit={save} className="space-y-5">
                 <div className="grid grid-cols-1 items-start gap-x-4 gap-y-4 md:grid-cols-2">
                   <FormField
-                    label="Terminal name"
+                    label={t('hardware.terminalName')}
                     required
                     id="terminal-name"
-                    help="Shown on receipts."
+                    help={t('hardware.terminalNameHelp')}
                   >
                     <Input
                       id="terminal-name"
@@ -156,13 +159,13 @@ export default function HardwarePage() {
                         update('terminalName', event.target.value)
                       }
                       prefixIcon={<Monitor size={16} />}
-                      placeholder="e.g. Front counter"
+                      placeholder={t('hardware.terminalPlaceholder')}
                     />
                   </FormField>
                   <FormField
-                    label="Receipt paper width"
+                    label={t('hardware.paperWidth')}
                     required
-                    help="Match printer paper."
+                    help={t('hardware.paperWidthHelp')}
                   >
                     <CustomSelect
                       value={settings.receiptWidth}
@@ -174,12 +177,12 @@ export default function HardwarePage() {
                         {
                           value: '80',
                           label: '80 mm',
-                          sublabel: 'Recommended receipt width',
+                          sublabel: t('hardware.recommendedWidth'),
                         },
                         {
                           value: '58',
                           label: '58 mm',
-                          sublabel: 'Compact receipt printer',
+                          sublabel: t('hardware.compactPrinter'),
                         },
                       ]}
                     />
@@ -189,31 +192,31 @@ export default function HardwarePage() {
                 <div className="flex items-center justify-between gap-4 rounded-lg border border-border-subtle bg-muted-surface p-5">
                   <div className="min-w-0">
                     <p className="m-0 text-sm font-bold text-text-main">
-                      Open receipt after sale
+                      {t('hardware.openReceipt')}
                     </p>
                     <p className="mt-1 mb-0 text-xs leading-relaxed text-text-muted">
-                      Open receipt after checkout.
+                      {t('hardware.openReceiptHelp')}
                     </p>
                   </div>
                   <Switch
                     checked={settings.autoPrint}
                     onCheckedChange={(checked) => update('autoPrint', checked)}
-                    label="Open receipt automatically after sale"
+                    label={t('hardware.openReceiptLabel')}
                   />
                 </div>
 
                 <div className="flex justify-end border-t border-border-subtle pt-5">
                   <Button type="submit">
                     <Save size={16} />
-                    Save terminal settings
+                    {t('hardware.saveTerminal')}
                   </Button>
                 </div>
               </form>
             </SectionCard>
 
             <SectionCard
-              title="Test receipt"
-              description="Preview receipt setup."
+              title={t('hardware.testReceipt')}
+              description={t('hardware.testReceiptHelp')}
               icon={<ReceiptText size={20} />}
               className="h-full"
             >
@@ -221,27 +224,27 @@ export default function HardwarePage() {
               <div className="mt-5 flex justify-center">
                 <Button variant="secondary" onClick={() => window.print()}>
                   <Printer size={16} />
-                  Print test receipt
+                  {t('hardware.printTest')}
                 </Button>
               </div>
             </SectionCard>
 
             <SectionCard
-              title="Scanner test"
-              description="Confirm barcode input."
+              title={t('hardware.scannerTest')}
+              description={t('hardware.scannerTestHelp')}
               icon={<ScanBarcode size={20} />}
               className="h-full"
             >
               <FormField
-                label="Barcode scanner input"
-                help="Focus field, then scan."
+                label={t('hardware.scannerInput')}
+                help={t('hardware.scannerInputHelp')}
                 id="scanner-test"
               >
                 <Input
                   ref={scannerInput}
                   id="scanner-test"
-                  aria-label="Scanner test"
-                  placeholder="Click here, then scan a barcode"
+                  aria-label={t('hardware.scannerTest')}
+                  placeholder={t('hardware.scannerPlaceholder')}
                   onKeyDown={scan}
                   prefixIcon={<Keyboard size={16} />}
                 />
@@ -264,12 +267,12 @@ export default function HardwarePage() {
             </SectionCard>
 
             <SectionCard
-              title="Cash drawer"
-              description="Choose drawer opening method."
+              title={t('hardware.cashDrawer')}
+              description={t('hardware.cashDrawerHelp')}
               icon={<WalletCards size={20} />}
               className="h-full"
             >
-              <FormField label="Drawer opening method" required>
+              <FormField label={t('hardware.drawerMethod')} required>
                 <CustomSelect
                   value={settings.cashDrawerMode}
                   onChange={(value) =>
@@ -279,13 +282,13 @@ export default function HardwarePage() {
                   options={[
                     {
                       value: 'MANUAL',
-                      label: 'Manual',
-                      sublabel: 'Open with the drawer key or button',
+                      label: t('hardware.manual'),
+                      sublabel: t('hardware.manualHelp'),
                     },
                     {
                       value: 'PRINTER',
-                      label: 'Receipt printer',
-                      sublabel: 'Drawer is connected to the printer',
+                      label: t('hardware.receiptPrinter'),
+                      sublabel: t('hardware.printerDrawerHelp'),
                     },
                   ]}
                 />
@@ -295,23 +298,23 @@ export default function HardwarePage() {
                 className="mt-5"
                 icon={<AlertCircle size={17} />}
               >
-                Printer drawers need a driver or local bridge.
+                {t('hardware.driverHelp')}
               </AlertBanner>
             </SectionCard>
           </div>
 
           <SectionCard
-            title="Customer display"
-            description="Show a second customer screen."
+            title={t('hardware.customerDisplay')}
+            description={t('hardware.customerDisplayHelp')}
             icon={<ShoppingBasket size={20} />}
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="m-0 text-sm font-bold text-text-main">
-                  Enable customer-facing display
+                  {t('hardware.enableDisplay')}
                 </p>
                 <p className="mt-1 mb-0 text-xs leading-relaxed text-text-muted">
-                  Show basket, payment, and change.
+                  {t('hardware.enableDisplayHelp')}
                 </p>
               </div>
               <Switch
@@ -319,13 +322,13 @@ export default function HardwarePage() {
                 onCheckedChange={(checked) =>
                   update('customerDisplay', checked)
                 }
-                label="Enable customer-facing display"
+                label={t('hardware.enableDisplay')}
               />
             </div>
             <div className="mt-6 flex justify-end border-t border-border-subtle pt-5">
               <Button onClick={saveSettings}>
                 <Save size={16} />
-                Save hardware settings
+                {t('hardware.saveHardware')}
               </Button>
             </div>
           </SectionCard>

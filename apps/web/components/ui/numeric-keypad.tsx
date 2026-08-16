@@ -3,6 +3,7 @@
 import { Delete } from 'lucide-react';
 import { Button } from './button';
 import { Input } from './input';
+import { useI18n } from '../../lib/i18n';
 
 type NumericKeypadProps = {
   value: string;
@@ -33,6 +34,7 @@ export function NumericKeypad({
   placeholder = '0.00',
   density = 'default',
 }: NumericKeypadProps) {
+  const { t } = useI18n();
   const compact = density === 'compact';
 
   function sanitize(nextValue: string) {
@@ -87,8 +89,8 @@ export function NumericKeypad({
           variant="secondary"
           size="keypadAction"
           className={compact ? 'h-10 w-10 sm:h-12 sm:w-12' : ''}
-          aria-label="Delete last digit"
-          title="Delete last digit"
+          aria-label={t('keypad.deleteLast')}
+          title={t('keypad.deleteLast')}
           onClick={() => onChange(value.slice(0, -1))}
         >
           <Delete size={18} />
@@ -97,8 +99,8 @@ export function NumericKeypad({
           variant="dangerSubtle"
           size="keypadAction"
           className={compact ? 'h-10 w-10 sm:h-12 sm:w-12' : ''}
-          aria-label="Clear amount"
-          title="Clear amount"
+          aria-label={t('keypad.clearAmount')}
+          title={t('keypad.clearAmount')}
           onClick={() => onChange('')}
         >
           C

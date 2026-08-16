@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { AppNav } from './app-nav';
+import { useI18n } from '../../lib/i18n';
 
 type AppShellProps = {
   children: ReactNode;
@@ -12,6 +13,7 @@ type AppShellProps = {
 const publicRoutes = new Set(['/', '/login', '/setup', '/activate']);
 
 export function AppShell({ children }: AppShellProps) {
+  const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
   const [routeReady, setRouteReady] = useState(false);
@@ -38,7 +40,7 @@ export function AppShell({ children }: AppShellProps) {
   if (!routeReady) {
     return (
       <div className="flex min-h-dvh w-full items-center justify-center bg-app px-4 text-text-muted">
-        <p className="m-0 text-sm font-bold">Checking session…</p>
+        <p className="m-0 text-sm font-bold">{t('auth.checkingSession')}</p>
       </div>
     );
   }
