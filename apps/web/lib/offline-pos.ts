@@ -60,6 +60,10 @@ export async function loadCachedCatalog<T>(branchId: string) {
   );
 }
 
+export async function clearCachedCatalogs() {
+  await transaction('catalogs', 'readwrite', (store) => store.clear());
+}
+
 export async function queueSale(sale: QueuedSale) {
   await transaction('queued-sales', 'readwrite', (store) => store.put(sale));
 }

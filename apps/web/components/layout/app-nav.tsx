@@ -37,6 +37,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { clearCachedCatalogs } from '../../lib';
 
 type NavItem = {
   href: string;
@@ -207,8 +208,14 @@ export function AppNav() {
 
   function signOut() {
     sessionStorage.removeItem('pos_access_token');
+    sessionStorage.removeItem('pos_exchange_draft');
     localStorage.removeItem('pos_access_token');
     localStorage.removeItem('pos_remembered_email');
+    localStorage.removeItem('pos_offline_session');
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('pos_shift_'))
+      .forEach((key) => localStorage.removeItem(key));
+    void clearCachedCatalogs().catch(() => undefined);
     router.push('/login');
   }
 
