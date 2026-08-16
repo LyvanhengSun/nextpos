@@ -348,7 +348,7 @@ export function AppNav() {
             )}
 
             {hasChildren && open && (!compact || mobile) && (
-              <div className={`mb-1 ml-[5px] mt-1 grid gap-0.5 border-l pl-2 ${mobile ? 'border-border-subtle' : 'border-slate-600'}`}>
+              <div className={`mb-1 ml-[15px] mt-1 grid gap-0.5 border-l pl-2 ${mobile ? 'border-border-subtle' : 'border-slate-600'}`}>
                 {group.children?.map((item) => {
                   const siblingMatch = group.children?.some(
                     (sibling) => sibling.href !== item.href && routeIsActive(pathname, sibling.href) && sibling.href.length > item.href.length,
