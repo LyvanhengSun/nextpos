@@ -510,7 +510,7 @@ export default function InventoryPage() {
               description={
                 lowStock.length
                   ? `${lowStock.length} item${lowStock.length === 1 ? '' : 's'} need attention.`
-                    : 'All tracked items are above their alert level.'
+                    : 'All stock is above alert levels.'
               }
               icon={<AlertTriangle size={20} />}
               actions={
