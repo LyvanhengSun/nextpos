@@ -12,16 +12,27 @@ export class BusinessesService {
       const passwordHash = await hash(input.ownerPassword, 12);
       return await this.prisma.$transaction(async (tx) => {
         const business = await tx.business.create({
-          data: { name: input.name, code: input.code, currency: input.currency },
+          data: {
+            name: input.name,
+            code: input.code,
+            currency: input.currency,
+            businessType: input.businessType,
+            phone: input.phone.trim(),
+          },
         });
         const branch = await tx.branch.create({
-          data: { businessId: business.id, name: input.branchName, code: input.branchCode },
+          data: {
+            businessId: business.id,
+            name: input.branchName,
+            code: input.branchCode,
+          },
         });
         const owner = await tx.user.create({
           data: {
             businessId: business.id,
             branchId: branch.id,
             email: input.ownerEmail.toLowerCase(),
+            phone: input.ownerPhone.trim(),
             firstName: input.ownerFirstName,
             lastName: input.ownerLastName,
             role: 'OWNER',

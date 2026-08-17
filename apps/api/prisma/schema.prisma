@@ -18,6 +18,7 @@ model Business {
   name      String
   code      String   @unique
   currency  String   @default("USD")
+  businessType String?
   taxRateBasisPoints Int @default(0)
   defaultInventoryAlertLevel Int @default(5)
   address   String?
@@ -114,6 +115,7 @@ model User {
   businessId String
   branchId   String?
   email      String   @unique
+  phone      String?
   firstName  String
   lastName   String
   role       UserRole @default(CASHIER)

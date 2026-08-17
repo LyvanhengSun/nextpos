@@ -21,6 +21,20 @@ export class CreateBusinessDto {
   @IsIn(['USD', 'KHR', 'BOTH'])
   currency!: 'USD' | 'KHR' | 'BOTH';
 
+  @IsIn([
+    'RETAIL', 'GROCERY', 'RESTAURANT_CAFE', 'FASHION', 'ELECTRONICS',
+    'BEAUTY_HEALTH', 'PHARMACY', 'SERVICE', 'WHOLESALE', 'OTHER',
+  ])
+  businessType!:
+    | 'RETAIL' | 'GROCERY' | 'RESTAURANT_CAFE' | 'FASHION'
+    | 'ELECTRONICS' | 'BEAUTY_HEALTH' | 'PHARMACY'
+    | 'SERVICE' | 'WHOLESALE' | 'OTHER';
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(60)
+  phone!: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)
@@ -32,6 +46,11 @@ export class CreateBusinessDto {
 
   @IsEmail()
   ownerEmail!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(60)
+  ownerPhone!: string;
 
   @IsString()
   @IsNotEmpty()
