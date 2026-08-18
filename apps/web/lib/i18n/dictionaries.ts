@@ -2016,9 +2016,9 @@ export const english = {
   'setup.essentials':
     'Only the essentials. You can change these details later.',
   'setup.backToSignIn': 'Back to sign in',
-  'setup.createAccount': 'Create your workspace',
+  'setup.createAccount': 'Create your business account',
   'setup.createAccountHelp':
-    'Set up your owner account and store details in a few simple steps.',
+    'Set up your account and store in a few steps.',
   'setup.step': 'Step',
   'setup.ownerDetails': 'Owner details',
   'setup.ownerDetailsHelp': 'Tell us who will manage this workspace.',
@@ -4058,9 +4058,9 @@ export const khmer: Record<TranslationKey, string> = {
   'setup.businessOwner': 'អាជីវកម្ម និងម្ចាស់',
   'setup.essentials': 'បំពេញតែព័ត៌មានសំខាន់ៗ អ្នកអាចកែប្រែនៅពេលក្រោយ',
   'setup.backToSignIn': 'ត្រឡប់ទៅចូលប្រើ',
-  'setup.createAccount': 'បង្កើតកន្លែងធ្វើការរបស់អ្នក',
+  'setup.createAccount': 'បង្កើតគណនីអាជីវកម្មរបស់អ្នក',
   'setup.createAccountHelp':
-    'រៀបចំគណនីម្ចាស់ និងព័ត៌មានហាងរបស់អ្នកក្នុងជំហានងាយៗមួយចំនួន',
+    'រៀបចំគណនី និងហាងរបស់អ្នកក្នុងពីរបីជំហាន',
   'setup.step': 'ជំហាន',
   'setup.ownerDetails': 'ព័ត៌មានម្ចាស់',
   'setup.ownerDetailsHelp': 'ប្រាប់យើងអំពីអ្នកដែលនឹងគ្រប់គ្រងកន្លែងធ្វើការនេះ',
