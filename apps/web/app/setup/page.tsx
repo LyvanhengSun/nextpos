@@ -306,7 +306,12 @@ export default function SetupPage() {
                   <ArrowLeft size={17} /> {t('setup.back')}
                 </Button>
               ) : (
-                <p className="m-0 text-center text-sm text-text-muted sm:text-left">{t('setup.haveWorkspace')} <Link className="font-bold text-brand hover:text-brand-hover" href="/login">{t('auth.signIn')}</Link></p>
+                <p className="m-0 flex flex-col text-left text-xs text-text-muted sm:block sm:text-sm">
+                  <span>{t('setup.haveWorkspace')}</span>{' '}
+                  <Link className="whitespace-nowrap font-bold text-brand hover:text-brand-hover" href="/login">
+                    {t('auth.signIn')}
+                  </Link>
+                </p>
               )}
 
               {step < steps.length - 1 ? (
