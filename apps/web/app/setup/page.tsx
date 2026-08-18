@@ -165,7 +165,7 @@ export default function SetupPage() {
       </aside>
 
       <section className="flex min-h-dvh flex-col">
-        <header className="flex min-h-20 shrink-0 items-center justify-between border-b border-slate-200 px-5 sm:px-8 lg:px-10">
+        <header className="flex min-h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 sm:min-h-20 sm:px-8 lg:px-10">
           <Link href="/login" className="inline-flex items-center gap-2 text-sm font-bold text-brand transition hover:text-brand-hover">
             <ArrowLeft size={17} />
             {t('setup.backToSignIn')}
@@ -173,42 +173,42 @@ export default function SetupPage() {
           <LanguageSwitcher />
         </header>
 
-        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8 sm:px-8 lg:px-10 lg:py-10">
-          <div className="mb-8">
-            <h2 className="m-0 text-2xl font-extrabold tracking-tight text-text-main sm:text-3xl">{t('setup.createAccount')}</h2>
-            <p className="mt-2 mb-0 text-sm leading-6 text-text-muted">{t('setup.createAccountHelp')}</p>
+        <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-5 py-5 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
+          <div className="mb-6 sm:mb-8">
+            <h2 className="m-0 text-xl font-extrabold tracking-tight text-text-main sm:text-3xl">{t('setup.createAccount')}</h2>
+            <p className="mt-2 mb-0 hidden text-sm leading-6 text-text-muted sm:block">{t('setup.createAccountHelp')}</p>
           </div>
 
-          <ol className="mb-8 grid list-none grid-cols-3 gap-2 p-0 sm:gap-4" aria-label={t('setup.createWorkspace')}>
+          <ol className="mb-5 grid list-none grid-cols-3 gap-2 p-0 sm:mb-8 sm:gap-4" aria-label={t('setup.createWorkspace')}>
             {steps.map(({ label, Icon }, index) => {
               const active = index === step;
               const complete = index < step;
               return (
                 <li key={label} className="relative min-w-0">
                   {index < steps.length - 1 && (
-                    <span className={`absolute top-5 left-[calc(50%+1.5rem)] h-0.5 w-[calc(100%-2.5rem)] ${complete ? 'bg-brand' : 'bg-slate-200'}`} aria-hidden="true" />
+                    <span className={`absolute top-4 left-[calc(50%+1.25rem)] h-0.5 w-[calc(100%-2rem)] sm:top-5 sm:left-[calc(50%+1.5rem)] sm:w-[calc(100%-2.5rem)] ${complete ? 'bg-brand' : 'bg-slate-200'}`} aria-hidden="true" />
                   )}
                   <div className="relative flex flex-col items-center text-center">
-                    <span className={`grid size-10 place-items-center rounded-full border-2 transition ${active ? 'border-brand bg-brand text-white shadow-md shadow-brand/20' : complete ? 'border-brand bg-emerald-50 text-brand' : 'border-slate-200 bg-white text-slate-400'}`}>
+                    <span className={`grid size-8 place-items-center rounded-full border-2 transition sm:size-10 ${active ? 'border-brand bg-brand text-white shadow-md shadow-brand/20' : complete ? 'border-brand bg-emerald-50 text-brand' : 'border-slate-200 bg-white text-slate-400'}`}>
                       {complete ? <CheckCircle2 size={18} /> : <Icon size={17} />}
                     </span>
-                    <span className="mt-2 text-[11px] font-semibold text-text-muted">{t('setup.step')} {index + 1}</span>
-                    <span className={`mt-0.5 truncate text-xs font-bold sm:text-sm ${active || complete ? 'text-text-main' : 'text-slate-400'}`}>{label}</span>
+                    <span className="mt-2 hidden text-[11px] font-semibold text-text-muted sm:block">{t('setup.step')} {index + 1}</span>
+                    <span className={`mt-1 truncate text-[10px] font-bold sm:mt-0.5 sm:text-sm ${active || complete ? 'text-text-main' : 'text-slate-400'}`}>{label}</span>
                   </div>
                 </li>
               );
             })}
           </ol>
 
-          <form ref={formRef} onSubmit={submit} className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.3)]">
-            <div className="flex-1 p-5 sm:p-8 lg:min-h-[25rem] lg:p-10">
-              <div className="mb-7 flex items-start gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-emerald-50 text-brand">
+          <form ref={formRef} onSubmit={submit} className="flex flex-1 flex-col rounded-xl border border-slate-200 bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.3)] sm:rounded-2xl">
+            <div className="flex-1 p-6 sm:p-8 lg:min-h-[25rem] lg:p-10">
+              <div className="mb-6 flex items-start gap-3 sm:mb-7">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-brand sm:size-10">
                   {step === 0 ? <CircleUserRound size={20} /> : step === 1 ? <Building2 size={20} /> : <ShieldCheck size={20} />}
                 </span>
                 <div>
                   <h3 className="m-0 text-lg font-extrabold text-text-main">{steps[step].label}</h3>
-                  <p className="mt-1 mb-0 text-sm text-text-muted">
+                  <p className="mt-1 mb-0 hidden text-sm text-text-muted sm:block">
                     {step === 0 ? t('setup.ownerDetailsHelp') : step === 1 ? t('setup.businessDetailsHelp') : t('setup.securityHelp')}
                   </p>
                 </div>
@@ -300,9 +300,9 @@ export default function SetupPage() {
               </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50/70 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/70 p-3 sm:px-8 sm:py-4">
               {step > 0 ? (
-                <Button type="button" variant="secondary" size="lg" className="h-12 rounded-lg" onClick={() => { setMessage(undefined); setStep((current) => current - 1); }}>
+                <Button type="button" variant="secondary" size="lg" className="h-11 rounded-lg sm:h-12" onClick={() => { setMessage(undefined); setStep((current) => current - 1); }}>
                   <ArrowLeft size={17} /> {t('setup.back')}
                 </Button>
               ) : (
@@ -310,11 +310,11 @@ export default function SetupPage() {
               )}
 
               {step < steps.length - 1 ? (
-                <Button type="button" size="lg" className="h-12 rounded-lg sm:min-w-36" onClick={nextStep}>
+                <Button type="button" size="lg" className="h-11 rounded-lg sm:h-12 sm:min-w-36" onClick={nextStep}>
                   {t('setup.continue')} <ArrowRight size={17} />
                 </Button>
               ) : (
-                <Button type="submit" size="lg" disabled={saving} className="h-12 rounded-lg sm:min-w-48">
+                <Button type="submit" size="lg" disabled={saving} className="h-11 rounded-lg sm:h-12 sm:min-w-48">
                   {saving ? t('setup.creating') : t('setup.createWorkspace')}
                   {!saving && <ArrowRight size={17} />}
                 </Button>

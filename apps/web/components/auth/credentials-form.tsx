@@ -133,23 +133,23 @@ export function CredentialsForm({
       </aside>
 
       <section className="flex min-h-dvh flex-col">
-        <header className="flex h-20 shrink-0 items-center justify-between px-5 sm:px-8 lg:justify-end lg:px-10">
+        <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:h-20 sm:px-8 lg:justify-end lg:px-10">
           <div className="flex items-center gap-2.5 lg:hidden">
-            <span className="grid size-10 place-items-center rounded-lg bg-brand text-white shadow-sm">
-              <Store size={21} />
+            <span className="grid size-9 place-items-center rounded-lg bg-brand text-white shadow-sm sm:size-10">
+              <Store size={20} />
             </span>
             <span className="font-extrabold text-text-main">KN POS</span>
           </div>
           <LanguageSwitcher />
         </header>
 
-        <div className="flex flex-1 items-center justify-center px-4 py-8 sm:px-8 lg:px-12">
-          <div className="w-full max-w-[34rem] rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-35px_rgba(15,23,42,0.28)] sm:p-10 lg:p-12">
-            <div className="mb-8">
-              <span className="mb-5 grid size-11 place-items-center rounded-xl bg-emerald-50 text-brand">
-                <ShieldCheck size={22} />
+        <div className="flex min-h-0 flex-1 items-center justify-center px-5 py-4 sm:px-8 sm:py-8 lg:px-12">
+          <div className="w-full max-w-[34rem] rounded-xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-35px_rgba(15,23,42,0.28)] sm:rounded-2xl sm:p-10 lg:p-12">
+            <div className="mb-6 sm:mb-8">
+              <span className="mb-3 grid size-9 place-items-center rounded-lg bg-emerald-50 text-brand sm:mb-5 sm:size-11 sm:rounded-xl">
+                <ShieldCheck size={20} />
               </span>
-              <h2 className="m-0 text-2xl font-extrabold tracking-tight text-text-main sm:text-3xl">
+              <h2 className="m-0 text-xl font-extrabold tracking-tight text-text-main sm:text-3xl">
                 {isLogin ? t('auth.signIn') : t(titleKey)}
               </h2>
               <p className="mt-2 mb-0 text-sm leading-6 text-text-muted">
@@ -187,7 +187,7 @@ export function CredentialsForm({
                   autoComplete="email"
                   prefixIcon={<Mail size={16} />}
                   className="pl-10"
-                  wrapperClassName="h-12 rounded-lg"
+                  wrapperClassName="h-11 rounded-lg sm:h-12"
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </FormField>
@@ -208,7 +208,7 @@ export function CredentialsForm({
                   }
                   autoComplete={isLogin ? 'current-password' : 'new-password'}
                   className="pl-10"
-                  wrapperClassName="[&>button]:h-12 [&>div]:h-12 [&>div]:rounded-lg"
+                  wrapperClassName="[&>button]:h-11 [&>div]:h-11 [&>div]:rounded-lg sm:[&>button]:h-12 sm:[&>div]:h-12"
                   onChange={(event) => setPassword(event.target.value)}
                 />
               </FormField>
@@ -219,7 +219,7 @@ export function CredentialsForm({
                     <p className="m-0 text-sm font-semibold text-text-main">
                       {t('auth.rememberDevice')}
                     </p>
-                    <p className="mt-0.5 mb-0 text-xs text-text-muted">
+                    <p className="mt-0.5 mb-0 hidden text-xs text-text-muted sm:block">
                       {t('auth.staySignedIn')}
                     </p>
                   </div>
@@ -235,7 +235,7 @@ export function CredentialsForm({
                 type="submit"
                 size="lg"
                 disabled={loading}
-                className="mt-1 h-12 w-full rounded-lg text-sm font-bold shadow-sm"
+                className="mt-1 h-11 w-full rounded-lg text-sm font-bold shadow-sm sm:h-12"
               >
                 {loading
                   ? t('auth.processing')
@@ -245,18 +245,20 @@ export function CredentialsForm({
                 {!loading && <ArrowRight size={17} />}
               </Button>
 
-              <div className="my-1 flex items-center gap-3" aria-hidden="true">
+              <div className="my-1 hidden items-center gap-3 sm:flex" aria-hidden="true">
                 <span className="h-px flex-1 bg-slate-200" />
                 <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">KN POS</span>
                 <span className="h-px flex-1 bg-slate-200" />
               </div>
 
-              <p className="m-0 text-center text-sm text-text-muted">
-                {isLogin
-                  ? t('auth.firstSetup')
-                  : t('auth.alreadyActivated')}{' '}
+              <p className="m-0 flex flex-col items-center text-center text-sm text-text-muted sm:block">
+                <span>
+                  {isLogin
+                    ? t('auth.firstSetup')
+                    : t('auth.alreadyActivated')}
+                </span>{' '}
                 <Link
-                  className="font-bold text-brand hover:text-brand-hover"
+                  className="whitespace-nowrap font-bold text-brand hover:text-brand-hover"
                   href={isLogin ? '/setup' : '/login'}
                 >
                   {isLogin ? t('auth.createBusiness') : t('auth.signIn')}
@@ -266,7 +268,7 @@ export function CredentialsForm({
           </div>
         </div>
 
-        <footer className="flex min-h-16 shrink-0 items-center justify-center border-t border-slate-200 px-6 py-4 text-center text-xs text-text-muted sm:justify-between">
+        <footer className="hidden min-h-16 shrink-0 items-center justify-center border-t border-slate-200 px-6 py-4 text-center text-xs text-text-muted sm:flex sm:justify-between">
           <span>© {new Date().getFullYear()} KN POS</span>
           <span className="hidden sm:inline">{t('auth.protectedAccess')}</span>
         </footer>
