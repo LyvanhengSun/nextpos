@@ -158,6 +158,15 @@ body {
   scrollbar-gutter: stable;
 }
 
+@media (max-width: 768px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+    scrollbar-gutter: auto;
+  }
+}
+
 /* ── Global Typography Utility Classes ── */
 .text-display {
   font-size: var(--font-size-display);
