@@ -46,9 +46,9 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-hidden bg-app max-[768px]:flex-col max-[768px]:overflow-x-clip max-[768px]:overflow-y-visible">
+    <div className="flex min-h-screen w-full max-w-full overflow-hidden bg-app max-[768px]:h-dvh max-[768px]:min-h-0 max-[768px]:flex-col">
       <AppNav />
-      <div className="h-screen min-w-0 max-w-full flex-1 overflow-y-auto max-[768px]:h-auto max-[768px]:overflow-x-clip max-[768px]:overflow-y-visible">
+      <div className="h-screen min-w-0 max-w-full flex-1 overflow-y-auto max-[768px]:h-auto max-[768px]:min-h-0 max-[768px]:w-full max-[768px]:overflow-x-hidden max-[768px]:overflow-y-auto max-[768px]:overscroll-x-none">
         {children}
       </div>
     </div>

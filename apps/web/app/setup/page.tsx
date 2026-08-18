@@ -142,7 +142,7 @@ export default function SetupPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-[#f7f8fa] lg:grid lg:grid-cols-[minmax(23rem,38%)_1fr]">
+    <main className="min-h-dvh w-full max-w-full overflow-x-hidden bg-[#f7f8fa] lg:grid lg:grid-cols-[minmax(23rem,38%)_1fr]">
       <aside className="relative hidden min-h-dvh overflow-hidden bg-slate-950 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="absolute inset-0 bg-[url('/images/login-hero.png')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-950/25 to-slate-950/90" />

@@ -161,9 +161,13 @@ body {
 @media (max-width: 768px) {
   html,
   body {
+    height: 100%;
+    width: 100%;
     max-width: 100%;
-    overflow-x: clip;
+    overflow: hidden;
+    overscroll-behavior-x: none;
     scrollbar-gutter: auto;
+    touch-action: pan-y;
   }
 }
 
