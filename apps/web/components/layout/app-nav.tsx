@@ -388,9 +388,15 @@ export function AppNav() {
           <Store size={22} strokeWidth={2.5} />
           <span>KN POS</span>
         </Link>
-        <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-lg border-white/15 bg-white/10 p-0 text-white hover:bg-white/15 hover:text-white" onClick={() => setMobileOpen((value) => !value)} aria-label={t('nav.toggleMenu')}>
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher
+            dark
+            className="h-10 rounded-lg border-white/15 bg-white/10 px-3"
+          />
+          <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-lg border-white/15 bg-white/10 p-0 text-white hover:bg-white/15 hover:text-white" onClick={() => setMobileOpen((value) => !value)} aria-label={t('nav.toggleMenu')}>
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </Button>
+        </div>
       </header>
 
       <div
@@ -407,7 +413,6 @@ export function AppNav() {
             </div>
             <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">{navigationContent(true)}</nav>
             <div className="grid gap-2 border-t border-border-subtle px-4 py-4">
-              <LanguageSwitcher className="w-full" />
               <Button type="button" variant="dangerSubtle" size="md" className="w-full" onClick={signOut}><LogOut size={18} /><span>{t('auth.logOut')}</span></Button>
             </div>
           </aside>
